@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
@@ -59,7 +60,7 @@ def load_raw_dataset(path: Path | None = None) -> pd.DataFrame:
 
 def normalize_raw_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     cleaned = df.copy()
-    cleaned = cleaned.replace("?", pd.NA)
+    cleaned = cleaned.replace("?", np.nan)
     cleaned.columns = [column.strip() for column in cleaned.columns]
     cleaned[BINARY_TARGET_COLUMN] = (
         cleaned[TARGET_COLUMN]
