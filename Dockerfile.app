@@ -6,11 +6,11 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app/src
 
-COPY pyproject.toml requirements.txt README.md ./
+COPY pyproject.toml README.md ./
 COPY src ./src
 COPY data ./data
 COPY models ./models
 
-RUN pip install --no-cache-dir --upgrade pip uv && uv pip install --system -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip uv && uv pip install --system -e .
 
 EXPOSE 8000 8501

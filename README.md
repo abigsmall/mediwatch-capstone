@@ -25,25 +25,35 @@ If you want the stricter `<30` interpretation instead, adjust the target mapping
 
 ## Quick start
 1. Use Python `3.11` or `3.12`.
-2. Create a virtual environment with `uv`.
-3. Install dependencies with `uv`:
+2. Create and sync the virtual environment with `uv`:
 
 ```bash
-uv venv
-source .venv/bin/activate
-uv pip install -r requirements.txt
+uv sync
 ```
 
 4. Copy `.env.example` to `.env` and fill in AWS values if you want S3 uploads.
 5. Place `diabetic_data.csv` in `data/raw/`.
 
-You can also sync directly from `pyproject.toml`:
+Activate the environment when you want to run commands directly:
 
 ```bash
-uv pip install -e .
+source .venv/bin/activate
 ```
 
-## Train a model
+The repository includes a committed `uv.lock`, so `uv sync` installs the locked dependency set for reproducible setup. If you want to force the exact locked environment without letting `uv` refresh anything, use:
+
+```bash
+uv sync --frozen
+```
+
+If you intentionally change dependencies in `pyproject.toml`, regenerate the lockfile with:
+
+```bash
+uv lock
+uv sync
+```
+
+### Train a model
 ```bash
 uv run python -m mediwatch.training.train
 ```
@@ -58,7 +68,7 @@ Artifacts written locally:
 - `models/mediwatch_model_<timestamp>.joblib`
 - `models/latest_model.json`
 
-## Run the API
+### Run the API
 ```bash
 uv run uvicorn mediwatch.api.app:app --reload
 ```
@@ -68,12 +78,12 @@ Endpoints:
 - `POST /predict`
 - `POST /predict-batch`
 
-## Run the UI
+### Run the UI
 ```bash
 uv run streamlit run src/mediwatch/ui/streamlit_app.py
 ```
 
-## Simulate drift and monitor
+### Simulate drift and monitor
 Generate a shifted dataset:
 
 ```bash
@@ -90,10 +100,12 @@ Outputs:
 - `evidently/drift_report.html`
 - `evidently/drift_summary.json`
 
-## Run the stack with Docker Compose
+### Run the stack with Docker Compose
 ```bash
 docker compose up --build
 ```
+
+The container setup remains `uv`-based, but it installs from the project metadata during image build rather than running `uv sync` inside the container.
 
 Recommended services:
 - API: `http://localhost:8000`
@@ -102,7 +114,7 @@ Recommended services:
 - MLflow: `http://localhost:5000`
 - Airflow: `http://localhost:8080`
 
-## Airflow retraining
+### Airflow retraining
 The DAG lives at `mediwatch_retrain_dag.py` (mediwatch-capstone/airflow/dags/mediwatch_retrain_dag.py:1). It accepts:
 - `reference_data_path`
 - `current_data_path`
@@ -114,16 +126,6 @@ The retraining pipeline:
 2. Retrains a candidate model
 3. Compares candidate `f1` against the incumbent
 4. Promotes the candidate when it is better or equal
-
-## Why there is no Redis service
-The `docker-compose.yml` stack uses Airflow with `LocalExecutor` instead of `CeleryExecutor`. This was a deliberate capstone tradeoff to reduce infrastructure complexity and make the project easier to reproduce on a single EC2 instance for evaluation and demo recording.
-
-With `LocalExecutor`:
-- Airflow runs tasks locally
-- Postgres is still used for Airflow metadata
-- Redis is not required
-
-`Redis` would be necessary if this project were using `CeleryExecutor` with separate Airflow workers, which is closer to production-style distributed setup. For this submission, the simpler `LocalExecutor` design keeps the orchestration part intact while lowering the risk of environment issues during evaluation (and for myself during development).
 
 ## Suggested demo script
 1. Show MLflow runs after training.
@@ -142,6 +144,7 @@ With `LocalExecutor`:
 - Architecture overview
 - Setup and rerun instructions
 - Future enhancements section
+- Committed `uv.lock` for reproducible dependency setup
 
 ## Future enhancements
 - Kubernetes or EKS deployment

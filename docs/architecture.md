@@ -11,6 +11,7 @@
 
 ## Infrastructure
 - Primary deployment target: `EC2 + S3 + Docker Compose`
+- Dependency workflow: `uv` with a committed `uv.lock`
 - Services:
   - `api`
   - `ui`
@@ -19,7 +20,22 @@
   - `airflow-webserver`
   - `airflow-scheduler`
 
+## Reasons for doing certain things
+### Why `uv` instead of `pip`
+I found out about `uv` while taking this course and fell in love with it. There were a couple times working on assignments in this SwitchUp when I ran into weird Python dependencies issues and having to learn about Python wheels and such stuff. Even knowing there’s `conda` environments and just multiple ways to set up Python rubbed me the wrong way (how is that Pythonic?) so when I learned about the speed and simplicity of `uv`, I decided to go all in on it.
+
+### Why there is no Redis service
+`docker-compose.yaml` uses Airflow with `LocalExecutor` instead of `CeleryExecutor`: reduces complexity to both make my development easier and also has a benefit in making the project easier to reproduce on a single EC2 instance for evaluation. Hooray!
+
+With `LocalExecutor`:
+- Airflow runs tasks locally
+- Postgres is still used for Airflow metadata
+- Redis is not required
+
+Redis would be necessary if this project were using `CeleryExecutor` with separate Airflow workers, which is what you’d probably see in production. For this submission, the simpler `LocalExecutor` design keeps the orchestration part intact while lowering the risk of environment issues during evaluation (and for myself during development).
+
 ## Future scope
 - Replace Docker Compose orchestration with Kubernetes or EKS.
 - Move Airflow to MWAA if more time is available.
 - Add richer monitoring metrics and model performance dashboards.
+- Listen to the `FutureWarning` from MLflow and log runs to a database like SQLite (currently it’s just logging to a local folder).
