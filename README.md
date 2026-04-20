@@ -115,6 +115,16 @@ The retraining pipeline:
 3. Compares candidate `f1` against the incumbent
 4. Promotes the candidate when it is better or equal
 
+## Why there is no Redis service
+The `docker-compose.yml` stack uses Airflow with `LocalExecutor` instead of `CeleryExecutor`. This was a deliberate capstone tradeoff to reduce infrastructure complexity and make the project easier to reproduce on a single EC2 instance for evaluation and demo recording.
+
+With `LocalExecutor`:
+- Airflow runs tasks locally
+- Postgres is still used for Airflow metadata
+- Redis is not required
+
+`Redis` would be necessary if this project were using `CeleryExecutor` with separate Airflow workers, which is closer to production-style distributed setup. For this submission, the simpler `LocalExecutor` design keeps the orchestration part intact while lowering the risk of environment issues during evaluation (and for myself during development).
+
 ## Suggested demo script
 1. Show MLflow runs after training.
 2. Open Swagger and score a patient payload.
