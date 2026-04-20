@@ -34,6 +34,9 @@ With `LocalExecutor`:
 
 Redis would be necessary if this project were using `CeleryExecutor` with separate Airflow workers, which is what you’d probably see in production. For this submission, the simpler `LocalExecutor` design keeps the orchestration part intact while lowering the risk of environment issues during evaluation (and for myself during development).
 
+### Why `[tool.setuptools.packages.find]` in pyproject.toml
+This is a cool feature (among many, many other things) that Codex let me know about: it allows users, once they’ve installed the Python dependencies, to run the Python scripts in this environment without having to specify either absolute path names or get the relative path correct.
+
 ## Future scope
 - Replace Docker Compose orchestration with Kubernetes or EKS.
 - Move Airflow to MWAA if more time is available.
