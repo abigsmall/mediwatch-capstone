@@ -14,7 +14,7 @@ from mediwatch.settings import settings
 TARGET_COLUMN = "readmitted"
 BINARY_TARGET_COLUMN = "readmitted_binary"
 ID_COLUMNS = ["encounter_id", "patient_nbr"]
-LEAKY_COLUMNS = ["readmitted", "encounter_id", "patient_nbr"]
+LEAKY_COLUMNS = ["readmitted", "readmitted_binary", "encounter_id", "patient_nbr"]
 OPTIONAL_DROP_COLUMNS = [
     "weight",
     "payer_code",
