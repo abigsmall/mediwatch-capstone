@@ -57,7 +57,7 @@ uv lock
 uv sync
 ```
 
-And again, this part is not for local dev but if deploying to Docker (see [Regenerate Airflow requirements](#regenerate-airflow-requirements)):
+This following part is not strictly for local dev but if deploying Docker and you intentionally change dependencies in `pyproject.toml`, in addition to regenerating the lockfile with the above commands, regenerate the `requirements-airflow.txt` file with the below script (see [Regenerate Airflow requirements](#regenerate-airflow-requirements)):
 
 ```bash
 uv run python scripts/generate_requirements_airflow.py
