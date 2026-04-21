@@ -13,18 +13,20 @@ MediWatch is an end-to-end MLOps capstone project for predicting patient readmis
 - EDA notebook and project documentation
 
 ## Dataset assumption
-This repository expects the Kaggle diabetes readmission dataset file to be available at:
+This repository expects the Kaggle diabetes readmission dataset file (available [here](https://www.kaggle.com/datasets/brandao/diabetes?resource=download))) to be available at:
 
 `data/raw/diabetic_data.csv`
 
-The code assumes the raw dataset contains the UCI-style `readmitted` column and converts it to a binary target:
+Please note that you will have to create the `data/raw/` directory yourself.
+
+The code assumes the raw dataset contains a `readmitted` column with values like `NO`, `<30`, and `>30`, converting it to a binary target:
 - `1` when `readmitted != "NO"`
 - `0` when `readmitted == "NO"`
 
 If you want the stricter `<30` interpretation instead, adjust the target mapping in `dataset.py` (mediwatch-capstone/src/mediwatch/dataset.py:37).
 
 ## Quick start for local dev
-NOTE: Deploying the Dockerfile requires an extra requirements-airflow.txt generation step!
+NOTE: Deploying the Dockerfile, in particular Dockerfile.airflow, requires an extra [`requirements-airflow.txt` generation step](#regenerate-airflow-requirements)!
 
 1. Use Python `3.12`.
 2. Create and sync the virtual environment with `uv`:
@@ -33,7 +35,7 @@ NOTE: Deploying the Dockerfile requires an extra requirements-airflow.txt genera
 uv sync
 ```
 
-4. Copy `.env.example` to `.env` and fill in AWS values if you want S3 uploads.
+4. Copy `.env.example` to `.env` and fill in with your S3 bucket values which MLflow and Airflow both rely on.
 5. Place `diabetic_data.csv` (from [Kaggle](https://www.kaggle.com/datasets/brandao/diabetes?resource=download)) in `data/raw/`.
 
 Activate the environment when you want to run commands directly:
@@ -108,6 +110,7 @@ Outputs:
 - `evidently/drift_report.html`
 - `evidently/drift_summary.json`
 
+## Docker Compose
 ### Run the stack with Docker Compose
 ```bash
 docker compose up --build
@@ -148,6 +151,9 @@ The retraining pipeline:
 2. Retrains a candidate model
 3. Compares candidate `f1` against the incumbent
 4. Promotes the candidate when it is better or equal
+
+## Deployment on EC2
+This repo assumes that your EC2 instance has a role allowing it access to the S3 bucket specified in [`.env`](.env): `MEDIWATCH_S3_BUCKET`. IK has provided a document with steps on how to do this: [Misc1: IK <> Creating an IAM Role to Access S3 from EC2](https://docs.google.com/document/d/14HVH5vkPEaVlwsR5utBhuuvBgleHnKRld0AUuxXd9Zs/edit?tab=t.0).
 
 ## Suggested demo script
 1. Show MLflow runs after training.

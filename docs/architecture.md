@@ -19,6 +19,7 @@
   - `postgres`
   - `airflow-webserver`
   - `airflow-scheduler`
+  - `evidently` (planned deployment service, not fully wired into the Compose stack yet)
 
 ## Reasons for doing certain things
 ### Why `uv` instead of `pip`
@@ -38,6 +39,13 @@ With `LocalExecutor`:
 - Redis is not required
 
 Redis would be necessary if this project were using `CeleryExecutor` with separate Airflow workers, which is what you’d probably see in production. For this submission, the simpler `LocalExecutor` design keeps the orchestration part intact while lowering the risk of environment issues during evaluation (and for myself during development).
+
+### Why `t3` for the EC2 deployment
+At first I was considering a `t2.xlarge` since that’s what the Monitoring & Continuous Training assignment setup instructed. However, since I’m way past the IK-allotted credits timeframe, I’m paying for AWS through my own personal account, and I’ve been noticing my monthly bill go up. One of these days I’ll get some of the data off the dormant EC2 instances I have, but I haven’t done that yet. But moreso than the dormant EC2 instances, it was working on the Monitoring & Continuous Training assignment for over a month that cost me more than I expected. Hence the thought of cost savings finally entered the picture for me.
+
+That’s when I realized there’s something called `t3` and it’s basically the same thing but better and cheaper. Then I saw that there’s `t4g` and can be even cheaper, but that it uses ARM / Graviton. For this capstone, I would rather avoid introducing another potential source of compatibility issues across Docker images, Python dependencies, and ML-related libraries. Using `t3` keeps the deployment on `x86_64`, which better matches the default assumptions behind many Python and container ecosystems and lowers the chance of spending time on architecture-specific debugging instead of the actual project.
+
+For this specific Compose stack, `8 GiB` RAM feels too tight once `api`, `ui`, `mlflow`, `postgres`, `airflow-webserver`, `airflow-scheduler`, and a future `evidently` service are all considered. A more realistic starting point is `t3.xlarge` (`16 GiB` RAM), with larger general-purpose instances being worth considering if the monitoring and retraining workloads become heavier.
 
 ### Why `[tool.setuptools.packages.find]` in pyproject.toml
 This is a cool feature (among many, many other things) that Codex let me know about: it allows users, once they’ve installed the Python dependencies, to run the Python scripts in this environment without having to specify either absolute path names or get the relative path correct.
