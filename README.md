@@ -126,6 +126,10 @@ Recommended services:
   - note: the dashboard defaults to the "GenAI" toggle in the left sidebar. toggle it to the "Model training" option.
 - Airflow: `http://localhost:8080`
 
+If you need to run a command to create or update an artifact, such as a simulated_drift.csv or a trained model, but have everything running with Docker:
+- in addition to running the Python command as listed earlier but prefaced with `docker compose exec api `
+- you can simply run it on the host side (so regular, non-Docker shell) since the artifact locations are shared
+
 ### Regenerate Airflow requirements
 The Airflow image uses `requirements-airflow.txt`, which should be generated from `pyproject.toml` instead of edited by hand.
 
