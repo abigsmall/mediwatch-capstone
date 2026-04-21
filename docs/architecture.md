@@ -22,7 +22,12 @@
 
 ## Reasons for doing certain things
 ### Why `uv` instead of `pip`
-I found out about `uv` while taking this course and fell in love with it. There were a couple times working on assignments in this SwitchUp when I ran into weird Python dependencies issues and having to learn about Python wheels and such stuff. Even knowing there’s `conda` environments and just multiple ways to set up Python rubbed me the wrong way (how is that Pythonic?) so when I learned about the speed and simplicity of `uv`, I decided to go all in on it.
+I found out about `uv` while taking this course and fell in love with it. There were a couple times working on assignments in this SwitchUp when I ran into weird Python dependencies issues and having to learn about Python wheels and such stuff. Even knowing there’s `conda` environments and just multiple ways to set up Python rubbed me the wrong way (how is that Pythonic?) so when I learned about the speed and simplicity of `uv`, I decided to go all in on it. Unfortunately, I ran into a lot of issues trying to get the Airflow Docker setup working with `uv`, partially due to misunderstandings from myself and Codex, but we got to it in the end :).
+
+### Why two `Dockerfile`s (`Dockerfile.app` and `Dockerfile.airflow`)
+The Airflow Docker image has its own conventions, from where its entrypoint is to [the permissions that are expected](https://airflow.apache.org/docs/docker-stack/build.html#:~:text=The%20production%20image%20of%20Airflow%20uses%20%E2%80%9Cairflow%E2%80%9D%20user%2C). There’s also an entire database setup process going on.
+
+On the otherhand, the FastAPI, Streamlit, and Evidently apps are more “typical” Python app services, so the separation keeps the deployment/inference concerns apart from from orchestration concerns.
 
 ### Why there is no Redis service
 `docker-compose.yaml` uses Airflow with `LocalExecutor` instead of `CeleryExecutor`: reduces complexity to both make my development easier and also has a benefit in making the project easier to reproduce on a single EC2 instance for evaluation. Hooray!
@@ -39,6 +44,10 @@ This is a cool feature (among many, many other things) that Codex let me know ab
 
 ## Future scope
 - Replace Docker Compose orchestration with Kubernetes or EKS.
-- Move Airflow to MWAA if more time is available.
+- Move Airflow to MWAA (AWS-managed Airflow) or even MWAA Serverless.
+- Add randomization to `AIRFLOW__WEBSERVER__SECRET_KEY` as per the [Airflow docs](https://airflow.apache.org/docs/apache-airflow/stable/configurations-ref.html#:~:text=It%20should%20be%20as%20random%20as%20possible.).
+- Hook into some Python-native way to update the requirements-airflow.txt when pyproject.toml is updated instead of having to call [`scripts/generate_requirements_airflow.py`](../scripts/generate_requirements_airflow.py).
+- Even better, figure out how to get the `Dockerfile.airflow` setup not rely on a separate requirements-airflow.txt.
+- For `Dockerfile.app`, use [the setup recommended](https://github.com/astral-sh/uv-docker-example/blob/main/Dockerfile) by Astral.
 - Add richer monitoring metrics and model performance dashboards.
 - Listen to the `FutureWarning` from MLflow and log runs to a database like SQLite (currently it’s just logging to a local folder).

@@ -111,8 +111,22 @@ Recommended services:
 - API: `http://localhost:8000`
 - Swagger docs: `http://localhost:8000/docs`
 - Streamlit UI: `http://localhost:8501`
-- MLflow: `http://localhost:5000`
+- MLflow: `http://localhost:5001`
+  - note: the dashboard defaults to the "GenAI" toggle in the left sidebar. toggle it to the "Model training" option.
 - Airflow: `http://localhost:8080`
+
+### Regenerate Airflow requirements
+The Airflow image uses `requirements-airflow.txt`, which should be generated from `pyproject.toml` instead of edited by hand.
+
+Regenerate it with:
+
+```bash
+uv run python scripts/generate_requirements_airflow.py
+```
+
+This script keeps ranged requirements from `pyproject.toml` and excludes API/UI-only packages from the Airflow runtime dependency file by default.
+
+Run it again whenever the project dependencies change and before rebuilding the Airflow image.
 
 ### Airflow retraining
 The DAG lives at `mediwatch_retrain_dag.py` (mediwatch-capstone/airflow/dags/mediwatch_retrain_dag.py:1). It accepts:
