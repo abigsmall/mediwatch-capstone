@@ -7,7 +7,7 @@ import streamlit as st
 from mediwatch.settings import settings
 
 
-API_URL = os.getenv("MEDIWATCH_API_URL", "http://api:8000")
+API_URL = os.getenv("MEDIWATCH_API_URL", "http://127.0.0.1:8000")
 
 
 DEFAULT_PAYLOAD = {
@@ -31,7 +31,28 @@ DEFAULT_PAYLOAD = {
     "max_glu_serum": "None",
     "A1Cresult": "None",
     "metformin": "No",
+    "repaglinide": "No",
+    "nateglinide": "No",
+    "chlorpropamide": "No",
+    "glimepiride": "No",
+    "acetohexamide": "No",
+    "glipizide": "No",
+    "glyburide": "No",
+    "tolbutamide": "No",
+    "pioglitazone": "No",
+    "rosiglitazone": "No",
+    "acarbose": "No",
+    "miglitol": "No",
+    "troglitazone": "No",
+    "tolazamide": "No",
+    "examide": "No",
+    "citoglipton": "No",
     "insulin": "Up",
+    "glyburide-metformin": "No",
+    "glipizide-metformin": "No",
+    "glimepiride-pioglitazone": "No",
+    "metformin-rosiglitazone": "No",
+    "metformin-pioglitazone": "No",
     "change": "Ch",
     "diabetesMed": "Yes",
 }
@@ -40,6 +61,7 @@ DEFAULT_PAYLOAD = {
 st.set_page_config(page_title="MediWatch", page_icon=":hospital:", layout="wide")
 st.title("MediWatch")
 st.caption("Predict patient readmission risk and demo the production API.")
+st.caption(f"API target: {API_URL}")
 
 payload_text = st.text_area(
     "Patient feature payload (JSON)",
