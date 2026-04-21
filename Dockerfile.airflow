@@ -3,4 +3,4 @@ FROM apache/airflow:2.10.2-python3.12
 COPY pyproject.toml /opt/airflow/project/pyproject.toml
 COPY README.md /opt/airflow/project/README.md
 COPY src /opt/airflow/project/src
-RUN pip install --no-cache-dir uv && uv pip install --system -e /opt/airflow/project
+RUN pip install --no-cache-dir uv && uv pip install --system /opt/airflow/project

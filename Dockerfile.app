@@ -11,6 +11,6 @@ COPY src ./src
 COPY data ./data
 COPY models ./models
 
-RUN pip install --no-cache-dir --upgrade pip uv && uv pip install --system -e .
+RUN pip install --no-cache-dir --upgrade pip uv && uv pip install --system .
 
 EXPOSE 8000 8501
