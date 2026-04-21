@@ -13,6 +13,7 @@ __pycache__/
 !.env.example
 htmlcov/
 mlruns/
+mlruns.db
 evidently/
 models/*.joblib
 models/latest_model.json
