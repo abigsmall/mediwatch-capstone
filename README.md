@@ -23,8 +23,10 @@ The code assumes the raw dataset contains the UCI-style `readmitted` column and 
 
 If you want the stricter `<30` interpretation instead, adjust the target mapping in `dataset.py` (mediwatch-capstone/src/mediwatch/dataset.py:37).
 
-## Quick start
-1. Use Python `3.11` or `3.12`.
+## Quick start for local dev
+NOTE: Deploying the Dockerfile requires an extra requirements-airflow.txt generation step!
+
+1. Use Python `3.12`.
 2. Create and sync the virtual environment with `uv`:
 
 ```bash
@@ -51,6 +53,12 @@ If you intentionally change dependencies in `pyproject.toml`, regenerate the loc
 ```bash
 uv lock
 uv sync
+```
+
+And again, this part is not for local dev but if deploying to Docker (see [Regenerate Airflow requirements](#regenerate-airflow-requirements)):
+
+```bash
+uv run python scripts/generate_requirements_airflow.py
 ```
 
 ### Train a model
