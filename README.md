@@ -34,7 +34,7 @@ uv sync
 ```
 
 4. Copy `.env.example` to `.env` and fill in AWS values if you want S3 uploads.
-5. Place `diabetic_data.csv` in `data/raw/`.
+5. Place `diabetic_data.csv` (from [Kaggle](https://www.kaggle.com/datasets/brandao/diabetes?resource=download)) in `data/raw/`.
 
 Activate the environment when you want to run commands directly:
 
