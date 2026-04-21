@@ -25,8 +25,37 @@ The code assumes the raw dataset contains a `readmitted` column with values like
 
 If you want the stricter `<30` interpretation instead, adjust the target mapping in `dataset.py` (mediwatch-capstone/src/mediwatch/dataset.py:37).
 
-## Quick start for local dev
-NOTE: Deploying the Dockerfile, in particular Dockerfile.airflow, requires an extra [`requirements-airflow.txt` generation step](#regenerate-airflow-requirements)!
+## Recommended setup: Docker Compose
+Docker Compose is the primary and recommended way to run this project. It is the most reproducible setup for evaluation because it brings up the API, Streamlit UI, MLflow, Airflow, and supporting services together in a consistent environment.
+
+Before starting the stack:
+
+1. Copy `.env.example` to `.env` and fill in the required values.
+2. Place `diabetic_data.csv` (from [Kaggle](https://www.kaggle.com/datasets/brandao/diabetes?resource=download)) in `data/raw/`.
+3. If you changed project dependencies, regenerate the Airflow dependency file as described in [Regenerate Airflow requirements](#regenerate-airflow-requirements).
+
+Start the stack with:
+
+```bash
+docker compose up --build
+```
+
+The container setup remains `uv`-based for the app image, but the recommended day-to-day evaluator path is still Docker Compose rather than running services individually on the host.
+
+Service endpoints from the host machine:
+- API: `http://localhost:8000`
+- Swagger docs: `http://localhost:8000/docs`
+- Streamlit UI: `http://localhost:8501`
+- MLflow: `http://localhost:5001`
+  - note: the dashboard defaults to the "GenAI" toggle in the left sidebar. toggle it to the "Model training" option.
+- Airflow: `http://localhost:8080`
+
+Important networking note:
+- from the host machine, MLflow is reached at `http://localhost:5001`
+- from other containers in the Compose network, MLflow is reached at `http://mlflow:5000`
+
+## Optional local development workflow
+The `uv` workflow below is useful for development, debugging, or generating artifacts quickly on the host, but it is not the primary recommended evaluation path.
 
 1. Use Python `3.12`.
 2. Create and sync the virtual environment with `uv`:
@@ -109,26 +138,6 @@ uv run python -m mediwatch.monitoring.drift --current-data data/processed/simula
 Outputs:
 - `evidently/drift_report.html`
 - `evidently/drift_summary.json`
-
-## Docker Compose
-### Run the stack with Docker Compose
-```bash
-docker compose up --build
-```
-
-The container setup remains `uv`-based, but it installs from the project metadata during image build rather than running `uv sync` inside the container.
-
-Recommended services:
-- API: `http://localhost:8000`
-- Swagger docs: `http://localhost:8000/docs`
-- Streamlit UI: `http://localhost:8501`
-- MLflow: `http://localhost:5001`
-  - note: the dashboard defaults to the "GenAI" toggle in the left sidebar. toggle it to the "Model training" option.
-- Airflow: `http://localhost:8080`
-
-If you need to run a command to create or update an artifact, such as a simulated_drift.csv or a trained model, but have everything running with Docker:
-- in addition to running the Python command as listed earlier but prefaced with `docker compose exec api `
-- you can simply run it on the host side (so regular, non-Docker shell) since the artifact locations are shared
 
 ### Regenerate Airflow requirements
 The Airflow image uses `requirements-airflow.txt`, which should be generated from `pyproject.toml` instead of edited by hand.
