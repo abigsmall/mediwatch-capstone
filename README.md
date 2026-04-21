@@ -169,7 +169,4 @@ The retraining pipeline:
 - Committed `uv.lock` for reproducible dependency setup
 
 ## Future enhancements
-- Kubernetes or EKS deployment
-- MWAA-managed orchestration
-- richer feature store and data validation
-- more sophisticated champion/challenger logic
+See [Future Scope](docs/architecture.md#future-scope).
