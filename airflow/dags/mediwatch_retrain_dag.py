@@ -13,12 +13,24 @@ from airflow.decorators import dag, task
 def mediwatch_retraining():
     @task
     def retrain(dag_run=None):
+        from pathlib import Path
+
         from mediwatch.pipelines.retrain import retrain
+        from mediwatch.settings import settings
 
         config = dag_run.conf or {}
         result = retrain(
-            reference_data_path=config["reference_data_path"],
-            current_data_path=config["current_data_path"],
+            reference_data_path=Path(
+                # default so no error is thrown when DAG is manually triggered
+                config.get("reference_data_path", str(settings.raw_dataset_path))
+            ),
+            current_data_path=Path(
+                config.get(
+                    "current_data_path",
+                    # default so no error is thrown when DAG is manually triggered
+                    str(settings.processed_dir / "simulated_drift.csv"),
+                )
+            ),
         )
         print(result)
         return result
