@@ -1,6 +1,14 @@
 FROM apache/airflow:2.10.2-python3.12
 
-COPY pyproject.toml /opt/airflow/project/pyproject.toml
-COPY README.md /opt/airflow/project/README.md
-COPY src /opt/airflow/project/src
-RUN pip install --no-cache-dir uv && uv pip install --system /opt/airflow/project
+COPY --from=ghcr.io/astral-sh/uv:0.4.1 /uv /uvx /bin/
+
+WORKDIR /opt/airflow/project
+
+COPY --chown=airflow:root pyproject.toml uv.lock README.md ./
+COPY --chown=airflow:root src ./src
+
+USER airflow
+ENV UV_LINK_MODE=copy
+ENV UV_PROJECT_ENVIRONMENT=/opt/airflow/.venv
+ENV PATH="/opt/airflow/.venv/bin:${PATH}"
+RUN uv sync --frozen --no-dev
