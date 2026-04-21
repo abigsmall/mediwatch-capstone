@@ -36,6 +36,7 @@ def read_manifest(path: Path | None = None) -> dict[str, Any]:
 
 
 def save_model(model: Any, model_version: str) -> Path:
+    # Make sure the repo’s output directories exist before we start producing artifacts
     ensure_directories()
     output_path = settings.models_dir / f"mediwatch_model_{model_version}.joblib"
     joblib.dump(model, output_path)

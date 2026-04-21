@@ -56,6 +56,8 @@ def load_raw_dataset(path: Path | None = None) -> pd.DataFrame:
     return normalize_raw_dataframe(df)
 
 
+# Clean the data, then transform the `TARGET_COLUMN` into `BINARY_TARGET_COLUMN`
+# since `TARGET_COLUMN` may not be a simple binary (and it is not for the diabetic_data.csv)
 def normalize_raw_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     cleaned = df.copy()
     cleaned = cleaned.replace("?", np.nan)
