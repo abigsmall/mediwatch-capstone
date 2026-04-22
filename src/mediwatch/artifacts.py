@@ -102,7 +102,10 @@ def save_model(model: Any, model_version: str) -> Path:
 def load_model(model_path: str | Path | None = None) -> Any:
     if model_path is None:
         manifest = read_manifest()
-        resolved_model_path = Path(manifest.get("model_path", manifest["local_model_path"]))
+        model_path_value = manifest.get("model_path") or manifest.get("local_model_path")
+        if not model_path_value:
+            raise KeyError("Manifest must contain either 'model_path' or 'local_model_path'.")
+        resolved_model_path = Path(model_path_value)
         if resolved_model_path.exists():
             model_path = resolved_model_path
         elif manifest.get("s3_model_uri"):
