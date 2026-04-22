@@ -13,11 +13,9 @@ MediWatch is an end-to-end MLOps capstone project for predicting patient readmis
 - EDA notebook and project documentation
 
 ## Dataset assumption
-This repository expects the Kaggle diabetes readmission dataset file (available [here](https://www.kaggle.com/datasets/brandao/diabetes?resource=download))) to be available at:
+This repository expects the Kaggle diabetes readmission dataset file (available [here](https://www.kaggle.com/datasets/brandao/diabetes?resource=download)) to be available at:
 
 `data/raw/diabetic_data.csv`
-
-Please note that you will have to create the `data/raw/` directory yourself.
 
 The code assumes the raw dataset contains a `readmitted` column with values like `NO`, `<30`, and `>30`, converting it to a binary target:
 - `1` when `readmitted != "NO"`
@@ -53,6 +51,30 @@ Service endpoints from the host machine:
 Important networking note:
 - from the host machine, MLflow is reached at `http://localhost:5001`
 - from other containers in the Compose network, MLflow is reached at `http://mlflow:5000`
+
+### First-run bootstrap
+On a fresh setup, the retraining DAG does not have any model to compare against yet. Before using the Airflow retraining flow for the first time, run one training job to create:
+
+- the initial model artifact
+- `models/latest_model.json`
+- the S3-backed manifest/model state used by retraining
+
+If you run that training command from your host shell, be careful with the MLflow tracking URI:
+
+- inside Docker services, MLflow is `http://mlflow:5000`
+- from the host machine, MLflow is `http://localhost:5001`
+
+One reliable host-side bootstrap sequence is:
+
+```bash
+set -a
+source .env
+set +a
+export MLFLOW_TRACKING_URI=http://localhost:5001
+uv run python -m mediwatch.training.train
+```
+
+After that baseline run succeeds, the Airflow retraining DAG can be triggered normally.
 
 ## Optional local development workflow
 The `uv` workflow below is useful for development, debugging, or generating artifacts quickly on the host, but it is not the primary recommended evaluation path.
@@ -96,6 +118,8 @@ uv run python scripts/generate_requirements_airflow.py
 ```bash
 uv run python -m mediwatch.training.train
 ```
+
+If you are running this command from the host while the Docker Compose stack is up, make sure `MLFLOW_TRACKING_URI` points to `http://localhost:5001` rather than the container-only hostname `http://mlflow:5000`.
 
 Optional tuning:
 
@@ -164,6 +188,9 @@ The retraining pipeline:
 2. Retrains a candidate model
 3. Compares candidate `f1` against the incumbent
 4. Promotes the candidate when it is better or equal
+
+Important:
+- on a fresh environment, run one baseline training job before triggering the DAG so that a baseline manifest/model state exists
 
 ## Deployment on EC2
 This repo assumes that your EC2 instance has a role allowing it access to the S3 bucket specified in [`.env`](.env): `MEDIWATCH_S3_BUCKET`. IK has provided a document with steps on how to do this: [Misc1: IK <> Creating an IAM Role to Access S3 from EC2](https://docs.google.com/document/d/14HVH5vkPEaVlwsR5utBhuuvBgleHnKRld0AUuxXd9Zs/edit?tab=t.0).
