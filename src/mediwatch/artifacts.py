@@ -14,6 +14,20 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+# In Airflow, mounted repo directories may be readable but not writable,
+# so fall back to /tmp for things like staging location for models before upload to S3.
+def _writable_directory(preferred: Path, fallback_name: str) -> Path:
+    if preferred.exists() and os.access(preferred, os.W_OK | os.X_OK):
+        return preferred
+
+    if preferred.parent.exists() and os.access(preferred.parent, os.W_OK | os.X_OK):
+        return preferred
+
+    fallback = Path("/tmp/mediwatch") / fallback_name
+    fallback.mkdir(parents=True, exist_ok=True)
+    return fallback
+
+
 def write_manifest(payload: dict[str, Any], path: Path | None = None) -> Path:
     manifest_path = path or settings.manifest_path
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -27,7 +41,8 @@ def read_manifest(path: Path | None = None) -> dict[str, Any]:
 
 
 def save_model(model: Any, model_version: str) -> Path:
-    output_path = settings.models_dir / f"mediwatch_model_{model_version}.joblib"
+    output_dir = _writable_directory(settings.models_dir, "models")
+    output_path = output_dir / f"mediwatch_model_{model_version}.joblib"
     joblib.dump(model, output_path)
     return output_path
 
