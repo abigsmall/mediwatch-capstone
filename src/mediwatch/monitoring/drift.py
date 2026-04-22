@@ -7,7 +7,7 @@ from typing import Any
 import pandas as pd
 import requests
 
-from mediwatch.artifacts import ensure_directories, load_model
+from mediwatch.artifacts import load_model
 from mediwatch.dataset import (
     build_feature_frame,
     infer_categorical_columns,
@@ -98,8 +98,6 @@ def generate_drift_report(
     reference_data_path: Path | None = None,
     trigger_retraining: bool = False,
 ) -> DriftSummary:
-    # Make sure the repo’s output directories exist before we start producing artifacts
-    ensure_directories()
     reference_df = _prepare_scored_frame(load_raw_dataset(reference_data_path))
     current_df = _prepare_scored_frame(pd.read_csv(current_data_path))
 
@@ -122,6 +120,7 @@ def generate_drift_report(
     run_dict = run.dict()
 
     report_path = settings.evidently_dir / "drift_report.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(run_dict, indent=2), encoding="utf-8")
 
     value_drift_nodes = run_dict.get("metrics", [])
@@ -156,6 +155,7 @@ def generate_drift_report(
         triggered_retraining=False,
     )
 
+    settings.drift_summary_path.parent.mkdir(parents=True, exist_ok=True)
     settings.drift_summary_path.write_text(
         json.dumps(asdict(summary), indent=2), encoding="utf-8"
     )

@@ -1,7 +1,6 @@
 import argparse
 import json
 
-from mediwatch.artifacts import ensure_directories
 from mediwatch.dataset import load_raw_dataset, make_dataset_bundle
 from mediwatch.training.pipeline import train_and_log
 
@@ -13,8 +12,6 @@ def main() -> None:
     parser.add_argument("--no-promote", action="store_true")
     args = parser.parse_args()
 
-    # Make sure the repo’s output directories exist before we start producing artifacts
-    ensure_directories()
     # `bundle` includes all the separate datasets (features, target, train, test) in one class for readability
     bundle = make_dataset_bundle(load_raw_dataset())
     # The core functionality, `train_and_log`, lives separately in training.pipeline since it is also used for retraining

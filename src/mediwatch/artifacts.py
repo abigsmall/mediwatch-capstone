@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -11,16 +12,6 @@ from mediwatch.settings import settings
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-
-
-def ensure_directories() -> None:
-    for directory in [
-        settings.processed_dir,
-        settings.models_dir,
-        settings.evidently_dir,
-        settings.mlruns_dir,
-    ]:
-        directory.mkdir(parents=True, exist_ok=True)
 
 
 def write_manifest(payload: dict[str, Any], path: Path | None = None) -> Path:
@@ -36,8 +27,6 @@ def read_manifest(path: Path | None = None) -> dict[str, Any]:
 
 
 def save_model(model: Any, model_version: str) -> Path:
-    # Make sure the repo’s output directories exist before we start producing artifacts
-    ensure_directories()
     output_path = settings.models_dir / f"mediwatch_model_{model_version}.joblib"
     joblib.dump(model, output_path)
     return output_path
