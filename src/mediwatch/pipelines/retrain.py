@@ -4,8 +4,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from mediwatch.artifacts import read_manifest, write_manifest
+from mediwatch.artifacts import read_manifest, upload_file_to_s3, write_manifest
 from mediwatch.dataset import build_feature_frame, normalize_raw_dataframe, make_dataset_bundle
+from mediwatch.settings import settings
 from mediwatch.training.pipeline import train_and_log
 
 
@@ -21,11 +22,13 @@ def retrain(reference_data_path: Path, current_data_path: Path) -> dict:
 
     promoted = candidate.f1 >= incumbent_metric
     if promoted:
-        new_manifest = read_manifest(Path(candidate.local_manifest_path)) if Path(candidate.local_manifest_path).exists() else {}
+        model_key = f"{settings.s3_prefix}/models/{Path(candidate.model_path).name}"
+        s3_model_uri = upload_file_to_s3(Path(candidate.model_path), model_key)
         new_manifest = {
             "project": incumbent_manifest.get("project", "MediWatch"),
             "model_version": candidate.model_version,
-            "local_model_path": candidate.model_path,
+            "model_path": candidate.model_path,
+            "s3_model_uri": s3_model_uri,
             "promotion_metric": "f1",
             "metrics": {
                 "f1": candidate.f1,

@@ -134,7 +134,7 @@ def train_and_log(
         manifest = {
             "project": settings.project_name,
             "model_version": model_version,
-            "local_model_path": str(model_path),
+            "model_path": str(model_path),
             "promotion_metric": settings.promotion_metric,
             "metrics": metrics,
             "params": params,
