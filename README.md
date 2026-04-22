@@ -5,7 +5,7 @@ MediWatch is an end-to-end MLOps capstone project for predicting patient readmis
 ## What is in this repo
 - A reusable training pipeline with a single preprocessing-plus-model artifact
 - MLflow logging and a small Ray Tune search space
-- REST API with Swagger docs at `/docs`
+- FastAPI REST API with Swagger docs at `/docs`
 - Streamlit UI for user interaction
 - Evidently monitoring with simulated drift generation
 - Airflow DAG for retraining and model promotion
@@ -26,9 +26,11 @@ If you want the stricter `<30` interpretation instead, adjust the target mapping
 ## Recommended setup: Docker Compose
 Docker Compose is the primary and recommended way to run this project. It is the most reproducible setup for evaluation because it brings up the API, Streamlit UI, MLflow, Airflow, and supporting services together in a consistent environment.
 
+TODO: We may need to update the above and below with Kubernetes information if we get to that
+
 Before starting the stack:
 
-1. Copy `.env.example` to `.env` and fill in the required values.
+1. Copy `.env.example` to `.env` and fill in an S3 bucket name
 2. Place `diabetic_data.csv` (from [Kaggle](https://www.kaggle.com/datasets/brandao/diabetes?resource=download)) in `data/raw/`.
 3. If you changed project dependencies, regenerate the Airflow dependency file as described in [Regenerate Airflow requirements](#regenerate-airflow-requirements).
 
@@ -38,19 +40,15 @@ Start the stack with:
 docker compose up --build
 ```
 
-The container setup remains `uv`-based for the app image, but the recommended day-to-day evaluator path is still Docker Compose rather than running services individually on the host.
-
 Service endpoints from the host machine:
-- API: `http://localhost:8000`
+- FastAPI API: `http://localhost:8000`
 - Swagger docs: `http://localhost:8000/docs`
 - Streamlit UI: `http://localhost:8501`
 - MLflow: `http://localhost:5001`
-  - note: the dashboard defaults to the "GenAI" toggle in the left sidebar. toggle it to the "Model training" option.
+  - On first load the dashboard defaults to the "GenAI" toggle in the left sidebar. Toggle it to the "Model training" option.
+  - Due to contention with port 5000 on macOS, from the host machine MLflow is reached at `http://localhost:5001`
+    - from other containers in the Compose network, `http://mlflow:5000`
 - Airflow: `http://localhost:8080`
-
-Important networking note:
-- from the host machine, MLflow is reached at `http://localhost:5001`
-- from other containers in the Compose network, MLflow is reached at `http://mlflow:5000`
 
 ### First-run bootstrap
 On a fresh setup, the retraining DAG does not have any model to compare against yet. Before using the Airflow retraining flow for the first time, run one training job to create:
