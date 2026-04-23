@@ -126,6 +126,12 @@ Optional tuning:
 uv run python -m mediwatch.training.tune
 ```
 
+Tune against a specific dataset path:
+
+```bash
+uv run python -m mediwatch.training.tune --data-path data/processed/simulated_drift.csv
+```
+
 Artifacts written locally:
 - `models/mediwatch_model_<timestamp>.joblib`
 - `models/latest_model.json`
@@ -186,9 +192,10 @@ The DAG lives at `mediwatch_retrain_dag.py` (mediwatch-capstone/airflow/dags/med
 
 The retraining pipeline:
 1. Combines reference and current data
-2. Retrains a candidate model
-3. Compares candidate `f1` against the incumbent
-4. Promotes the candidate when it is better or equal
+2. Runs tuning on the combined data to choose the candidate hyperparameters
+3. Retrains a candidate model with the best config
+4. Compares candidate `f1` against the incumbent
+5. Promotes the candidate when it is better or equal
 
 Important:
 - on a fresh environment, run one baseline training job before triggering the DAG so that a baseline manifest/model state exists

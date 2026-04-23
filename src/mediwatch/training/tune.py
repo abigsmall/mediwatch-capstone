@@ -1,13 +1,12 @@
 import argparse
 import json
+from pathlib import Path
 from typing import Any
 
-try:
-    from ray import tune
-except Exception:  # pragma: no cover - optional dependency fallback
-    tune = None
+import pandas as pd
+from ray import tune
 
-from mediwatch.dataset import load_raw_dataset, make_dataset_bundle
+from mediwatch.dataset import DatasetBundle, load_raw_dataset, make_dataset_bundle
 from mediwatch.training.pipeline import train_and_log
 
 
@@ -17,8 +16,22 @@ SEARCH_SPACE = {
 }
 
 
-def trainable(config: dict[str, Any]) -> dict[str, float]:
-    bundle = make_dataset_bundle(load_raw_dataset())
+# the `*` means everything after has to be passed by keyword, not position,
+# which is useful here for clarity since the arguments are mutually exclusive
+def _bundle_from_source(
+    *,
+    bundle: DatasetBundle | None = None,
+    dataframe: pd.DataFrame | None = None,
+    data_path: Path | None = None,
+) -> DatasetBundle:
+    if bundle is not None:
+        return bundle
+    if dataframe is not None:
+        return make_dataset_bundle(dataframe)
+    return make_dataset_bundle(load_raw_dataset(data_path))
+
+
+def trainable(config: dict[str, Any], bundle: DatasetBundle) -> dict[str, float]:
     result = train_and_log(
         bundle,
         c_value=float(config["c_value"]),
@@ -28,33 +41,21 @@ def trainable(config: dict[str, Any]) -> dict[str, float]:
     return {"f1": result.f1, "roc_auc": result.roc_auc}
 
 
-def run_without_ray() -> dict[str, Any]:
-    best_result = None
-    for c_value in SEARCH_SPACE["c_value"]:
-        for class_weight in SEARCH_SPACE["class_weight"]:
-            metrics = trainable({"c_value": c_value, "class_weight": class_weight})
-            candidate = {
-                "c_value": c_value,
-                "class_weight": class_weight,
-                **metrics,
-            }
-            if best_result is None or candidate["f1"] > best_result["f1"]:
-                best_result = candidate
-    return best_result or {}
+def run_tuning(
+    *,
+    samples: int = 1,
+    data_path: Path | None = None,
+    dataframe: pd.DataFrame | None = None,
+    bundle: DatasetBundle | None = None,
+) -> dict[str, Any]:
+    dataset_bundle = _bundle_from_source(bundle=bundle, dataframe=dataframe, data_path=data_path)
 
-
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--samples", type=int, default=1)
-    args = parser.parse_args()
-
-    if tune is None:
-        print(json.dumps({"backend": "fallback-grid-search", "best": run_without_ray()}, indent=2))
-        return
+    def _trainable(config: dict[str, Any]) -> dict[str, float]:
+        return trainable(config, dataset_bundle)
 
     tuner = tune.Tuner(
-        tune.with_resources(trainable, {"cpu": 1}),
-        tune_config=tune.TuneConfig(metric="f1", mode="max", num_samples=args.samples),
+        tune.with_resources(_trainable, {"cpu": 1}),
+        tune_config=tune.TuneConfig(metric="f1", mode="max", num_samples=samples),
         param_space={
             "c_value": tune.grid_search(SEARCH_SPACE["c_value"]),
             "class_weight": tune.grid_search(SEARCH_SPACE["class_weight"]),
@@ -62,17 +63,24 @@ def main() -> None:
     )
     results = tuner.fit()
     best = results.get_best_result(metric="f1", mode="max")
-    print(
-        json.dumps(
-            {
-                "backend": "ray-tune",
-                "best_config": best.config,
-                "best_metrics": best.metrics,
-            },
-            indent=2,
-            default=str,
-        )
+    return {
+        "backend": "ray-tune",
+        "best_config": best.config,
+        "best_metrics": best.metrics,
+    }
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--samples", type=int, default=1)
+    parser.add_argument("--data-path")
+    args = parser.parse_args()
+
+    result = run_tuning(
+        samples=args.samples,
+        data_path=Path(args.data_path) if args.data_path else None,
     )
+    print(json.dumps(result, indent=2, default=str))
 
 
 if __name__ == "__main__":
