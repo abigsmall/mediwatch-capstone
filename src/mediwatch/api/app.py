@@ -22,6 +22,11 @@ def health() -> dict[str, str]:
 
 @app.post("/predict", response_model=PredictionResponse)
 def predict(payload: PredictionRequest) -> PredictionResponse:
+    # Unfortunately there are two uses of the word `model` here:
+    # 1. Pydantic model: think “dataclass” or struct
+    # 2. Machine learning model
+    # `.model_dump()` has to do with the former 
+    # `load_model`, `model`, `model_version` all have to do with the latter
     payload_dict = payload.model_dump()
     try:
         model = load_model()
