@@ -86,6 +86,7 @@ uv sync
 
 4. Copy `.env.example` to `.env` and fill in with your S3 bucket values which MLflow and Airflow both rely on.
 5. Place `diabetic_data.csv` (from [Kaggle](https://www.kaggle.com/datasets/brandao/diabetes?resource=download)) in `data/raw/`.
+6. If your host user is not UID/GID `1000`, update `LOCAL_UID` and `LOCAL_GID` in `.env` before starting Docker Compose so bind-mounted output files stay owned by your host user.
 
 Activate the environment when you want to run commands directly:
 
@@ -156,6 +157,8 @@ Run monitoring:
 ```bash
 uv run python -m mediwatch.monitoring.drift --current-data data/processed/simulated_drift.csv --trigger-retraining
 ```
+
+If you run that command from the `api` container, files written into bind-mounted folders such as `evidently/` use `LOCAL_UID` and `LOCAL_GID` from `.env` so they remain writable from your host shell.
 
 Outputs:
 - `evidently/drift_report.html`
