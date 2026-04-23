@@ -3,6 +3,7 @@
 ## Core flow
 - `data/raw/diabetic_data.csv` is the source dataset.
 - `mediwatch.training.train` runs preprocessing, model training, MLflow logging, and artifact export.
+- `mediwatch.training.tune` uses Ray Tune to run the hyperparameter search and select the best config, while the per-trial logging still happens in `mediwatch.training.pipeline.train_and_log` (which `mediwatch.training.train` also relies on) via MLflow. The Tune `trainable` returns final metrics to Ray rather than calling `tune.report`.
 - `models/latest_model.json` acts as the deployment manifest for the active model.
 - `FastAPI` serves `/health`, `/predict`, and `/predict-batch`.
 - `Streamlit` provides the evaluator-facing UI.

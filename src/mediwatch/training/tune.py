@@ -54,11 +54,11 @@ def run_tuning(
 ) -> dict[str, Any]:
     dataset_bundle = _bundle_from_source(bundle=bundle, dataframe=dataframe, data_path=data_path)
 
-    def _trainable(config: dict[str, Any]) -> dict[str, float]:
-        return trainable(config, dataset_bundle)
-
     tuner = tune.Tuner(
-        tune.with_resources(_trainable, {"cpu": 1}),
+        tune.with_resources(
+            tune.with_parameters(trainable, bundle=dataset_bundle),
+            {"cpu": 1},
+        ),
         tune_config=tune.TuneConfig(metric="average_precision", mode="max", num_samples=samples),
         param_space={
             "c_value": tune.grid_search(SEARCH_SPACE["c_value"]),
