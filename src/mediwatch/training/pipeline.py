@@ -86,7 +86,7 @@ def _build_classifier(model_config: dict[str, Any]):
             max_depth=model_config.get("max_depth"),
             min_samples_leaf=int(model_config.get("min_samples_leaf", 1)),
             class_weight=model_config.get("class_weight"),
-            n_jobs=-1,
+            n_jobs=int(model_config.get("n_jobs", 1)),
             random_state=settings.random_state,
         )
 
@@ -96,7 +96,7 @@ def _build_classifier(model_config: dict[str, Any]):
             max_depth=model_config.get("max_depth"),
             min_samples_leaf=int(model_config.get("min_samples_leaf", 1)),
             class_weight=model_config.get("class_weight"),
-            n_jobs=-1,
+            n_jobs=int(model_config.get("n_jobs", 1)),
             random_state=settings.random_state,
         )
 

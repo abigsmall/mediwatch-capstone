@@ -102,7 +102,12 @@ def run_tuning(
             tune.with_parameters(trainable, bundle=dataset_bundle),
             {"cpu": 1},
         ),
-        tune_config=tune.TuneConfig(metric=promotion_metric, mode="max", num_samples=samples),
+        tune_config=tune.TuneConfig(
+            metric=promotion_metric,
+            mode="max",
+            num_samples=samples,
+            max_concurrent_trials=settings.tune_max_concurrent_trials,
+        ),
         param_space={
             "model_config": tune.grid_search(SEARCH_SPACE),
         },
