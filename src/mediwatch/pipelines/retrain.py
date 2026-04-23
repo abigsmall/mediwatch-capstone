@@ -8,6 +8,7 @@ from mediwatch.artifacts import load_model, read_manifest, upload_file_to_s3, wr
 from mediwatch.dataset import normalize_raw_dataframe, make_dataset_bundle
 from mediwatch.settings import settings
 from mediwatch.training.pipeline import evaluate_pipeline, train_and_log
+from mediwatch.training.tune import run_tuning
 
 
 def retrain(reference_data_path: Path, current_data_path: Path) -> dict:
@@ -16,7 +17,14 @@ def retrain(reference_data_path: Path, current_data_path: Path) -> dict:
     combined_df = pd.concat([reference_df, current_df], ignore_index=True)
 
     bundle = make_dataset_bundle(combined_df)
-    candidate = train_and_log(bundle, c_value=1.0, class_weight="balanced", register_as_best=False)
+    tuning_result = run_tuning(bundle=bundle)
+    best_config = tuning_result.get("best_config", {})
+    candidate = train_and_log(
+        bundle,
+        c_value=float(best_config.get("c_value", 1.0)),
+        class_weight=best_config.get("class_weight", "balanced"),
+        register_as_best=False,
+    )
     incumbent_manifest = read_manifest()
     incumbent_model = load_model()
     # the `f1` metric from the manifest does not account for the new (`current`) data, so evaluate it on data that includes that
@@ -46,6 +54,8 @@ def retrain(reference_data_path: Path, current_data_path: Path) -> dict:
         write_manifest(new_manifest)
 
     return {
+        "tuning_backend": tuning_result.get("backend"),
+        "best_config": best_config,
         "candidate_version": candidate.model_version,
         "candidate_f1": candidate.f1,
         "incumbent_f1": incumbent_metric,

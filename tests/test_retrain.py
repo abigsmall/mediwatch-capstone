@@ -40,10 +40,13 @@ def test_retrain_compares_candidate_and_incumbent_on_same_combined_test_split(
 
     candidate_bundle = {}
     incumbent_bundle = {}
+    tuned_config = {"c_value": 2.0, "class_weight": None}
 
     def fake_train_and_log(bundle, c_value, class_weight, register_as_best):
         candidate_bundle["test_x"] = bundle.test_x
         candidate_bundle["test_y"] = bundle.test_y
+        candidate_bundle["c_value"] = c_value
+        candidate_bundle["class_weight"] = class_weight
         return TrainingResult(
             model_version="candidate-v1",
             model_path=str(tmp_path / "candidate.joblib"),
@@ -70,6 +73,10 @@ def test_retrain_compares_candidate_and_incumbent_on_same_combined_test_split(
             "positive_rate": 0.40,
         }
 
+    monkeypatch.setattr(
+        "mediwatch.pipelines.retrain.run_tuning",
+        lambda bundle: {"backend": "fallback-grid-search", "best_config": tuned_config},
+    )
     monkeypatch.setattr("mediwatch.pipelines.retrain.train_and_log", fake_train_and_log)
     monkeypatch.setattr("mediwatch.pipelines.retrain.read_manifest", lambda: {"metrics": {"f1": 0.10}})
     monkeypatch.setattr("mediwatch.pipelines.retrain.load_model", lambda: object())
@@ -84,9 +91,13 @@ def test_retrain_compares_candidate_and_incumbent_on_same_combined_test_split(
 
     result = retrain(reference_path, current_path)
 
+    assert result["tuning_backend"] == "fallback-grid-search"
+    assert result["best_config"] == tuned_config
     assert result["candidate_f1"] == 0.60
     assert result["incumbent_f1"] == 0.70
     assert result["promoted"] is False
     assert wrote_manifest["called"] is False
+    assert candidate_bundle["c_value"] == 2.0
+    assert candidate_bundle["class_weight"] is None
     assert candidate_bundle["test_x"].equals(incumbent_bundle["test_x"])
     assert candidate_bundle["test_y"].equals(incumbent_bundle["test_y"])
