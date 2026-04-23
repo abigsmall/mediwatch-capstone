@@ -158,6 +158,12 @@ Generate a shifted dataset:
 uv run python -m mediwatch.pipelines.simulate_drift --output data/processed/simulated_drift.csv
 ```
 
+By default this resamples the source data each run, so repeated executions can produce different drifted datasets. If you want the same generated drift dataset again for a reproducible demo, pass a seed:
+
+```bash
+uv run python -m mediwatch.pipelines.simulate_drift --output data/processed/simulated_drift.csv --seed 42
+```
+
 Run monitoring:
 
 ```bash

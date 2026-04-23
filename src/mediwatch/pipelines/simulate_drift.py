@@ -6,8 +6,16 @@ import pandas as pd
 from mediwatch.dataset import load_raw_dataset
 
 
-def simulate_drift(output_path: Path, sample_size: int = 500) -> Path:
-    df = load_raw_dataset().sample(n=sample_size, replace=True, random_state=42).copy()
+def simulate_drift(
+    output_path: Path,
+    sample_size: int = 500,
+    seed: int | None = None,
+) -> Path:
+    df = load_raw_dataset().sample(
+        n=sample_size,
+        replace=True,
+        random_state=seed,
+    ).copy()
 
     if "time_in_hospital" in df.columns:
         df["time_in_hospital"] = (pd.to_numeric(df["time_in_hospital"], errors="coerce").fillna(1) + 4).clip(1, 14)
@@ -32,8 +40,17 @@ def main() -> None:
         default="data/processed/simulated_drift.csv",
     )
     parser.add_argument("--sample-size", type=int, default=500)
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="Optional random seed for reproducible simulated drift generation.",
+    )
     args = parser.parse_args()
-    simulate_drift(Path(args.output), sample_size=args.sample_size)
+    simulate_drift(
+        Path(args.output),
+        sample_size=args.sample_size,
+        seed=args.seed,
+    )
 
 
 if __name__ == "__main__":
