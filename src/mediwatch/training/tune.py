@@ -38,7 +38,11 @@ def trainable(config: dict[str, Any], bundle: DatasetBundle) -> dict[str, float]
         class_weight=config["class_weight"],
         register_as_best=False,
     )
-    return {"f1": result.f1, "roc_auc": result.roc_auc}
+    return {
+        "average_precision": result.average_precision,
+        "f1": result.f1,
+        "roc_auc": result.roc_auc,
+    }
 
 
 def run_tuning(
@@ -55,14 +59,14 @@ def run_tuning(
 
     tuner = tune.Tuner(
         tune.with_resources(_trainable, {"cpu": 1}),
-        tune_config=tune.TuneConfig(metric="f1", mode="max", num_samples=samples),
+        tune_config=tune.TuneConfig(metric="average_precision", mode="max", num_samples=samples),
         param_space={
             "c_value": tune.grid_search(SEARCH_SPACE["c_value"]),
             "class_weight": tune.grid_search(SEARCH_SPACE["class_weight"]),
         },
     )
     results = tuner.fit()
-    best = results.get_best_result(metric="f1", mode="max")
+    best = results.get_best_result(metric="average_precision", mode="max")
     return {
         "backend": "ray-tune",
         "best_config": best.config,

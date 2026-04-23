@@ -9,7 +9,13 @@ from mlflow.models.signature import infer_signature
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score
+from sklearn.metrics import (
+    average_precision_score,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
@@ -26,6 +32,7 @@ class TrainingResult:
     precision: float
     recall: float
     roc_auc: float
+    average_precision: float
     positive_rate: float
     local_manifest_path: str
     s3_model_uri: str
@@ -90,6 +97,7 @@ def evaluate_pipeline(model: Pipeline, test_x: pd.DataFrame, test_y: pd.Series) 
         "precision": float(precision_score(test_y, predicted)),
         "recall": float(recall_score(test_y, predicted)),
         "roc_auc": float(roc_auc_score(test_y, probabilities)),
+        "average_precision": float(average_precision_score(test_y, probabilities)),
         "positive_rate": float(predicted.mean()),
     }
 
@@ -159,6 +167,7 @@ def train_and_log(
             precision=metrics["precision"],
             recall=metrics["recall"],
             roc_auc=metrics["roc_auc"],
+            average_precision=metrics["average_precision"],
             positive_rate=metrics["positive_rate"],
             local_manifest_path=str(settings.manifest_path),
             s3_model_uri=s3_model_uri,

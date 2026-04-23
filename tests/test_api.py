@@ -1,9 +1,11 @@
+import numpy as np
+
 from mediwatch.api.app import app
 
 
 class DummyModel:
     def predict_proba(self, frame):
-        return [[0.2, 0.8]]
+        return np.array([[0.2, 0.8]])
 
 
 def test_health():

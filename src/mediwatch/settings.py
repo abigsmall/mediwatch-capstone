@@ -38,7 +38,7 @@ class Settings:
     mlflow_experiment_name: str = os.getenv(
         "MLFLOW_EXPERIMENT_NAME", "mediwatch-readmission"
     )
-    promotion_metric: str = os.getenv("MEDIWATCH_PROMOTION_METRIC", "f1")
+    promotion_metric: str = os.getenv("MEDIWATCH_PROMOTION_METRIC", "average_precision")
     random_state: int = int(os.getenv("MEDIWATCH_RANDOM_STATE", "42"))
     test_size: float = float(os.getenv("MEDIWATCH_TEST_SIZE", "0.2"))
     drift_share_threshold: float = float(

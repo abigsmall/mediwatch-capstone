@@ -194,7 +194,7 @@ The retraining pipeline:
 1. Combines reference and current data
 2. Runs tuning on the combined data to choose the candidate hyperparameters
 3. Retrains a candidate model with the best config
-4. Compares candidate `f1` against the incumbent
+4. Compares the candidate `promotion_metric` against the incumbent
 5. Promotes the candidate when it is better or equal
 
 Important:

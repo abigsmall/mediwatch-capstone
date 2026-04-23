@@ -11,6 +11,10 @@ from mediwatch.training.pipeline import evaluate_pipeline, train_and_log
 from mediwatch.training.tune import run_tuning
 
 
+def _candidate_metric(candidate, metric_name: str) -> float:
+    return float(getattr(candidate, metric_name))
+
+
 def retrain(reference_data_path: Path, current_data_path: Path) -> dict:
     reference_df = normalize_raw_dataframe(pd.read_csv(reference_data_path))
     current_df = normalize_raw_dataframe(pd.read_csv(current_data_path))
@@ -27,11 +31,14 @@ def retrain(reference_data_path: Path, current_data_path: Path) -> dict:
     )
     incumbent_manifest = read_manifest()
     incumbent_model = load_model()
-    # the `f1` metric from the manifest does not account for the new (`current`) data, so evaluate it on data that includes that
+    # The manifest metric does not account for new current data, so evaluate the incumbent
+    # on the same combined split used for the retraining candidate.
     incumbent_metrics = evaluate_pipeline(incumbent_model, bundle.test_x, bundle.test_y)
-    incumbent_metric = incumbent_metrics["f1"]
+    promotion_metric = settings.promotion_metric
+    incumbent_metric = incumbent_metrics[promotion_metric]
+    candidate_metric = _candidate_metric(candidate, promotion_metric)
 
-    promoted = candidate.f1 >= incumbent_metric
+    promoted = candidate_metric >= incumbent_metric
     if promoted:
         model_key = f"{settings.s3_prefix}/models/{Path(candidate.model_path).name}"
         s3_model_uri = upload_file_to_s3(Path(candidate.model_path), model_key)
@@ -40,8 +47,9 @@ def retrain(reference_data_path: Path, current_data_path: Path) -> dict:
             "model_version": candidate.model_version,
             "model_path": candidate.model_path,
             "s3_model_uri": s3_model_uri,
-            "promotion_metric": "f1",
+            "promotion_metric": promotion_metric,
             "metrics": {
+                "average_precision": candidate.average_precision,
                 "f1": candidate.f1,
                 "precision": candidate.precision,
                 "recall": candidate.recall,
@@ -57,8 +65,9 @@ def retrain(reference_data_path: Path, current_data_path: Path) -> dict:
         "tuning_backend": tuning_result.get("backend"),
         "best_config": best_config,
         "candidate_version": candidate.model_version,
-        "candidate_f1": candidate.f1,
-        "incumbent_f1": incumbent_metric,
+        "promotion_metric": promotion_metric,
+        "candidate_metric": candidate_metric,
+        "incumbent_metric": incumbent_metric,
         "promoted": promoted,
         "candidate_model_path": candidate.model_path,
     }

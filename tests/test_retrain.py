@@ -54,6 +54,7 @@ def test_retrain_compares_candidate_and_incumbent_on_same_combined_test_split(
             precision=0.61,
             recall=0.62,
             roc_auc=0.63,
+            average_precision=0.64,
             positive_rate=0.50,
             local_manifest_path=str(tmp_path / "manifest.json"),
             s3_model_uri="",
@@ -70,6 +71,7 @@ def test_retrain_compares_candidate_and_incumbent_on_same_combined_test_split(
             "precision": 0.71,
             "recall": 0.72,
             "roc_auc": 0.73,
+            "average_precision": 0.74,
             "positive_rate": 0.40,
         }
 
@@ -93,8 +95,9 @@ def test_retrain_compares_candidate_and_incumbent_on_same_combined_test_split(
 
     assert result["tuning_backend"] == "fallback-grid-search"
     assert result["best_config"] == tuned_config
-    assert result["candidate_f1"] == 0.60
-    assert result["incumbent_f1"] == 0.70
+    assert result["promotion_metric"] == "average_precision"
+    assert result["candidate_metric"] == 0.64
+    assert result["incumbent_metric"] == 0.74
     assert result["promoted"] is False
     assert wrote_manifest["called"] is False
     assert candidate_bundle["c_value"] == 2.0

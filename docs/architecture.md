@@ -7,7 +7,7 @@
 - `FastAPI` serves `/health`, `/predict`, and `/predict-batch`.
 - `Streamlit` provides the evaluator-facing UI.
 - `mediwatch.monitoring.drift` scores current data, runs Evidently drift checks, writes an HTML report, and optionally triggers Airflow.
-- `Airflow` runs the retraining DAG and promotes a candidate model when it beats the incumbent on `f1`.
+- `Airflow` runs the retraining DAG and promotes a candidate model when it beats the incumbent on the configured promotion metric, which defaults to `average_precision`.
 
 ## Infrastructure
 - Primary deployment target: `EC2 + S3 + Docker Compose`
