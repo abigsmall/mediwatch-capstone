@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from mediwatch.artifacts import read_manifest, upload_file_to_s3, write_manifest
-from mediwatch.dataset import build_feature_frame, normalize_raw_dataframe, make_dataset_bundle
+from mediwatch.artifacts import load_model, read_manifest, upload_file_to_s3, write_manifest
+from mediwatch.dataset import normalize_raw_dataframe, make_dataset_bundle
 from mediwatch.settings import settings
-from mediwatch.training.pipeline import train_and_log
+from mediwatch.training.pipeline import evaluate_pipeline, train_and_log
 
 
 def retrain(reference_data_path: Path, current_data_path: Path) -> dict:
@@ -18,7 +18,10 @@ def retrain(reference_data_path: Path, current_data_path: Path) -> dict:
     bundle = make_dataset_bundle(combined_df)
     candidate = train_and_log(bundle, c_value=1.0, class_weight="balanced", register_as_best=False)
     incumbent_manifest = read_manifest()
-    incumbent_metric = float(incumbent_manifest["metrics"]["f1"])
+    incumbent_model = load_model()
+    # the `f1` metric from the manifest does not account for the new (`current`) data, so evaluate it on data that includes that
+    incumbent_metrics = evaluate_pipeline(incumbent_model, bundle.test_x, bundle.test_y)
+    incumbent_metric = incumbent_metrics["f1"]
 
     promoted = candidate.f1 >= incumbent_metric
     if promoted:
