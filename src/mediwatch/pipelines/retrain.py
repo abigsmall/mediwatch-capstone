@@ -25,8 +25,7 @@ def retrain(reference_data_path: Path, current_data_path: Path) -> dict:
     best_config = tuning_result.get("best_config", {})
     candidate = train_and_log(
         bundle,
-        c_value=float(best_config.get("c_value", 1.0)),
-        class_weight=best_config.get("class_weight", "balanced"),
+        model_config=best_config,
         register_as_best=False,
     )
     incumbent_manifest = read_manifest()

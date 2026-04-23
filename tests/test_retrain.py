@@ -40,13 +40,18 @@ def test_retrain_compares_candidate_and_incumbent_on_same_combined_test_split(
 
     candidate_bundle = {}
     incumbent_bundle = {}
-    tuned_config = {"c_value": 2.0, "class_weight": None}
+    tuned_config = {
+        "model_type": "random_forest",
+        "n_estimators": 200,
+        "max_depth": 12,
+        "min_samples_leaf": 3,
+        "class_weight": None,
+    }
 
-    def fake_train_and_log(bundle, c_value, class_weight, register_as_best):
+    def fake_train_and_log(bundle, model_config, register_as_best):
         candidate_bundle["test_x"] = bundle.test_x
         candidate_bundle["test_y"] = bundle.test_y
-        candidate_bundle["c_value"] = c_value
-        candidate_bundle["class_weight"] = class_weight
+        candidate_bundle["model_config"] = model_config
         return TrainingResult(
             model_version="candidate-v1",
             model_path=str(tmp_path / "candidate.joblib"),
@@ -60,7 +65,7 @@ def test_retrain_compares_candidate_and_incumbent_on_same_combined_test_split(
             s3_model_uri="",
             s3_manifest_uri="",
             run_id="run-123",
-            params={"C": c_value, "class_weight": class_weight},
+            params=model_config,
         )
 
     def fake_evaluate_pipeline(model, test_x, test_y):
@@ -100,7 +105,6 @@ def test_retrain_compares_candidate_and_incumbent_on_same_combined_test_split(
     assert result["incumbent_metric"] == 0.74
     assert result["promoted"] is False
     assert wrote_manifest["called"] is False
-    assert candidate_bundle["c_value"] == 2.0
-    assert candidate_bundle["class_weight"] is None
+    assert candidate_bundle["model_config"] == tuned_config
     assert candidate_bundle["test_x"].equals(incumbent_bundle["test_x"])
     assert candidate_bundle["test_y"].equals(incumbent_bundle["test_y"])

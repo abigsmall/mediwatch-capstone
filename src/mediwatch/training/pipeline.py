@@ -7,6 +7,7 @@ import mlflow
 import pandas as pd
 from mlflow.models.signature import infer_signature
 from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
@@ -22,6 +23,10 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from mediwatch.artifacts import save_model, upload_file_to_s3, upload_json_to_s3, write_manifest
 from mediwatch.dataset import DatasetBundle, infer_categorical_columns, infer_numeric_columns
 from mediwatch.settings import settings
+
+DEFAULT_MODEL_CONFIG: dict[str, Any] = {
+    "model_type": "logistic_regression",
+}
 
 
 @dataclass
@@ -41,7 +46,82 @@ class TrainingResult:
     params: dict[str, Any]
 
 
-def build_pipeline(train_x: pd.DataFrame, c_value: float, class_weight: str | None) -> Pipeline:
+def _normalize_model_config(
+    model_config: dict[str, Any] | None = None,
+    *,
+    c_value: float = 1.0,
+    class_weight: str | None = "balanced",
+) -> dict[str, Any]:
+    if model_config is None:
+        model_config = {
+            "model_type": "logistic_regression",
+            "c_value": c_value,
+            "class_weight": class_weight,
+        }
+
+    normalized = {**DEFAULT_MODEL_CONFIG, **model_config}
+    if normalized["model_type"] == "logistic_regression":
+        normalized.setdefault("c_value", c_value)
+        normalized.setdefault("class_weight", class_weight)
+    if normalized.get("class_weight") == "none":
+        normalized["class_weight"] = None
+    return normalized
+
+
+def _build_classifier(model_config: dict[str, Any]):
+    model_type = model_config["model_type"]
+
+    if model_type == "logistic_regression":
+        return LogisticRegression(
+            C=float(model_config["c_value"]),
+            class_weight=model_config.get("class_weight"),
+            max_iter=int(model_config.get("max_iter", 1500)),
+            solver=str(model_config.get("solver", "liblinear")),
+            random_state=settings.random_state,
+        )
+
+    if model_type == "random_forest":
+        return RandomForestClassifier(
+            n_estimators=int(model_config.get("n_estimators", 300)),
+            max_depth=model_config.get("max_depth"),
+            min_samples_leaf=int(model_config.get("min_samples_leaf", 1)),
+            class_weight=model_config.get("class_weight"),
+            n_jobs=-1,
+            random_state=settings.random_state,
+        )
+
+    if model_type == "extra_trees":
+        return ExtraTreesClassifier(
+            n_estimators=int(model_config.get("n_estimators", 300)),
+            max_depth=model_config.get("max_depth"),
+            min_samples_leaf=int(model_config.get("min_samples_leaf", 1)),
+            class_weight=model_config.get("class_weight"),
+            n_jobs=-1,
+            random_state=settings.random_state,
+        )
+
+    raise ValueError(f"Unsupported model_type: {model_type}")
+
+
+def _loggable_params(model_config: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: "none" if value is None else value
+        for key, value in model_config.items()
+    }
+
+
+def build_pipeline(
+    train_x: pd.DataFrame,
+    model_config: dict[str, Any] | None = None,
+    *,
+    c_value: float = 1.0,
+    class_weight: str | None = "balanced",
+) -> Pipeline:
+    model_config = _normalize_model_config(
+        model_config,
+        c_value=c_value,
+        class_weight=class_weight,
+    )
     categorical_columns = infer_categorical_columns(train_x)
     numeric_columns = infer_numeric_columns(train_x)
 
@@ -73,13 +153,7 @@ def build_pipeline(train_x: pd.DataFrame, c_value: float, class_weight: str | No
         ]
     )
 
-    classifier = LogisticRegression(
-        C=c_value,
-        class_weight=class_weight,
-        max_iter=1500,
-        solver="liblinear",
-        random_state=settings.random_state,
-    )
+    classifier = _build_classifier(model_config)
 
     return Pipeline(
         steps=[
@@ -110,18 +184,24 @@ def train_and_log(
     bundle: DatasetBundle,
     c_value: float = 1.0,
     class_weight: str | None = "balanced",
+    model_config: dict[str, Any] | None = None,
     register_as_best: bool = True,
 ) -> TrainingResult:
     mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
     mlflow.set_experiment(settings.mlflow_experiment_name)
 
-    params = {"C": c_value, "class_weight": class_weight or "none"}
+    normalized_model_config = _normalize_model_config(
+        model_config,
+        c_value=c_value,
+        class_weight=class_weight,
+    )
+    params = _loggable_params(normalized_model_config)
     model_version = _model_version()
 
     with mlflow.start_run(run_name=f"mediwatch-train-{model_version}") as run:
         mlflow.log_params(params)
 
-        model = build_pipeline(bundle.train_x, c_value=c_value, class_weight=class_weight)
+        model = build_pipeline(bundle.train_x, model_config=normalized_model_config)
         model.fit(bundle.train_x, bundle.train_y)
         metrics = evaluate_pipeline(model, bundle.test_x, bundle.test_y)
         mlflow.log_metrics(metrics)

@@ -1,4 +1,5 @@
 import argparse
+from itertools import product
 import json
 from pathlib import Path
 from typing import Any
@@ -7,13 +8,52 @@ import pandas as pd
 from ray import tune
 
 from mediwatch.dataset import DatasetBundle, load_raw_dataset, make_dataset_bundle
+from mediwatch.settings import settings
 from mediwatch.training.pipeline import train_and_log
 
 
-SEARCH_SPACE = {
-    "c_value": [0.25, 0.5, 1.0, 2.0],
-    "class_weight": ["balanced", None],
-}
+LOGISTIC_REGRESSION_SEARCH = [
+    {
+        "model_type": "logistic_regression",
+        "c_value": c_value,
+        "class_weight": class_weight,
+    }
+    for c_value, class_weight in product([0.25, 0.5, 1.0, 2.0], ["balanced", None])
+]
+
+RANDOM_FOREST_SEARCH = [
+    {
+        "model_type": "random_forest",
+        "n_estimators": n_estimators,
+        "max_depth": max_depth,
+        "min_samples_leaf": min_samples_leaf,
+        "class_weight": class_weight,
+    }
+    for n_estimators, max_depth, min_samples_leaf, class_weight in product(
+        [200, 400],
+        [None, 12],
+        [1, 3],
+        ["balanced", None],
+    )
+]
+
+EXTRA_TREES_SEARCH = [
+    {
+        "model_type": "extra_trees",
+        "n_estimators": n_estimators,
+        "max_depth": max_depth,
+        "min_samples_leaf": min_samples_leaf,
+        "class_weight": class_weight,
+    }
+    for n_estimators, max_depth, min_samples_leaf, class_weight in product(
+        [200, 400],
+        [None, 12],
+        [1, 3],
+        ["balanced", None],
+    )
+]
+
+SEARCH_SPACE = LOGISTIC_REGRESSION_SEARCH + RANDOM_FOREST_SEARCH + EXTRA_TREES_SEARCH
 
 
 # the `*` means everything after has to be passed by keyword, not position,
@@ -34,14 +74,16 @@ def _bundle_from_source(
 def trainable(config: dict[str, Any], bundle: DatasetBundle) -> dict[str, float]:
     result = train_and_log(
         bundle,
-        c_value=float(config["c_value"]),
-        class_weight=config["class_weight"],
+        model_config=dict(config["model_config"]),
         register_as_best=False,
     )
     return {
         "average_precision": result.average_precision,
         "f1": result.f1,
+        "precision": result.precision,
+        "recall": result.recall,
         "roc_auc": result.roc_auc,
+        "positive_rate": result.positive_rate,
     }
 
 
@@ -53,24 +95,25 @@ def run_tuning(
     bundle: DatasetBundle | None = None,
 ) -> dict[str, Any]:
     dataset_bundle = _bundle_from_source(bundle=bundle, dataframe=dataframe, data_path=data_path)
+    promotion_metric = settings.promotion_metric
 
     tuner = tune.Tuner(
         tune.with_resources(
             tune.with_parameters(trainable, bundle=dataset_bundle),
             {"cpu": 1},
         ),
-        tune_config=tune.TuneConfig(metric="average_precision", mode="max", num_samples=samples),
+        tune_config=tune.TuneConfig(metric=promotion_metric, mode="max", num_samples=samples),
         param_space={
-            "c_value": tune.grid_search(SEARCH_SPACE["c_value"]),
-            "class_weight": tune.grid_search(SEARCH_SPACE["class_weight"]),
+            "model_config": tune.grid_search(SEARCH_SPACE),
         },
     )
     results = tuner.fit()
-    best = results.get_best_result(metric="average_precision", mode="max")
+    best = results.get_best_result(metric=promotion_metric, mode="max")
     return {
         "backend": "ray-tune",
-        "best_config": best.config,
+        "best_config": best.config["model_config"],
         "best_metrics": best.metrics,
+        "promotion_metric": promotion_metric,
     }
 
 

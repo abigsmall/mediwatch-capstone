@@ -120,7 +120,7 @@ uv run python -m mediwatch.training.train
 
 If you are running this command from the host while the Docker Compose stack is up, make sure `MLFLOW_TRACKING_URI` points to `http://localhost:5001` rather than the container-only hostname `http://mlflow:5000`.
 
-Optional tuning:
+Optional tuning across logistic regression, random forest, and extra trees candidates:
 
 ```bash
 uv run python -m mediwatch.training.tune
@@ -198,8 +198,8 @@ The DAG lives at `mediwatch_retrain_dag.py` (mediwatch-capstone/airflow/dags/med
 
 The retraining pipeline:
 1. Combines reference and current data
-2. Runs tuning on the combined data to choose the candidate hyperparameters
-3. Retrains a candidate model with the best config
+2. Runs tuning on the combined data to choose the candidate model family and hyperparameters
+3. Retrains a candidate model with the best model config
 4. Compares the candidate `promotion_metric` against the incumbent
 5. Promotes the candidate when it is better or equal
 
