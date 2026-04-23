@@ -166,9 +166,13 @@ def generate_drift_report(
             auth=(settings.airflow_username, settings.airflow_password),
             json={
                 "conf": {
-                    "reference_data_path": str(reference_data_path or settings.raw_dataset_path),
-                    "current_data_path": str(current_data_path),
-                    "drift_summary_path": str(settings.drift_summary_path),
+                    "reference_data_path": str(
+                        settings.to_airflow_path(reference_data_path or settings.raw_dataset_path)
+                    ),
+                    "current_data_path": str(settings.to_airflow_path(current_data_path)),
+                    "drift_summary_path": str(
+                        settings.to_airflow_path(settings.drift_summary_path)
+                    ),
                     "promotion_metric": settings.promotion_metric,
                 }
             },

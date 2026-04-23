@@ -28,6 +28,9 @@ class Settings:
     )
     airflow_username: str = os.getenv("MEDIWATCH_AIRFLOW_USERNAME", "airflow")
     airflow_password: str = os.getenv("MEDIWATCH_AIRFLOW_PASSWORD", "airflow")
+    airflow_project_root: Path = Path(
+        os.getenv("MEDIWATCH_AIRFLOW_PROJECT_ROOT", "/opt/airflow/project")
+    )
     mlflow_tracking_uri: str = os.getenv(
         "MLFLOW_TRACKING_URI",
         f"file://{PROJECT_ROOT / 'mlruns'}",
@@ -41,6 +44,20 @@ class Settings:
     drift_share_threshold: float = float(
         os.getenv("MEDIWATCH_DRIFT_SHARE_THRESHOLD", "0.3")
     )
+
+    def to_airflow_path(self, path: Path) -> Path:
+        candidate = Path(path)
+        if not candidate.is_absolute():
+            return self.airflow_project_root / candidate
+
+        try:
+            relative = candidate.resolve(strict=False).relative_to(
+                PROJECT_ROOT.resolve(strict=False)
+            )
+        except ValueError:
+            return candidate
+
+        return self.airflow_project_root / relative
 
 
 settings = Settings()
