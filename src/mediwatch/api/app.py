@@ -1,6 +1,4 @@
 from datetime import datetime, timezone
-
-import pandas as pd
 from fastapi import FastAPI, HTTPException
 
 from mediwatch.artifacts import load_model, read_manifest
