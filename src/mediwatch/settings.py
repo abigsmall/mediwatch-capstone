@@ -44,6 +44,9 @@ class Settings:
     )
     ray_dashboard_host: str = os.getenv("MEDIWATCH_RAY_DASHBOARD_HOST", "0.0.0.0")
     ray_dashboard_port: int = int(os.getenv("MEDIWATCH_RAY_DASHBOARD_PORT", "8265"))
+    ray_object_store_memory_bytes: int = int(
+        os.getenv("MEDIWATCH_RAY_OBJECT_STORE_MEMORY_BYTES", "1000000000")
+    )
     random_state: int = int(os.getenv("MEDIWATCH_RANDOM_STATE", "42"))
     test_size: float = float(os.getenv("MEDIWATCH_TEST_SIZE", "0.2"))
     drift_share_threshold: float = float(

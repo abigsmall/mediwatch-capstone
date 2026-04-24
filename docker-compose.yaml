@@ -111,6 +111,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.airflow
+    shm_size: "1g"
     env_file:
       - .env
     environment:

@@ -18,6 +18,7 @@ def test_init_ray_for_tuning_uses_dashboard_settings(monkeypatch):
         "include_dashboard": True,
         "dashboard_host": tune.settings.ray_dashboard_host,
         "dashboard_port": tune.settings.ray_dashboard_port,
+        "object_store_memory": tune.settings.ray_object_store_memory_bytes,
     }
 
 
@@ -42,6 +43,7 @@ def test_trainable_logs_trial_as_child_run(monkeypatch):
         parent_run_id,
         extra_tags,
         run_name_prefix,
+        log_model_artifacts,
     ):
         captured.update(
             {
@@ -51,6 +53,7 @@ def test_trainable_logs_trial_as_child_run(monkeypatch):
                 "parent_run_id": parent_run_id,
                 "extra_tags": extra_tags,
                 "run_name_prefix": run_name_prefix,
+                "log_model_artifacts": log_model_artifacts,
             }
         )
         return SimpleNamespace(
@@ -78,4 +81,5 @@ def test_trainable_logs_trial_as_child_run(monkeypatch):
         "model_type": "extra_trees",
     }
     assert captured["run_name_prefix"] == "mediwatch-tune-trial-extra_trees"
+    assert captured["log_model_artifacts"] is False
     assert metrics["average_precision"] == 0.81

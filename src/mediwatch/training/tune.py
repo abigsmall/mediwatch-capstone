@@ -67,6 +67,7 @@ def _init_ray_for_tuning() -> bool:
         include_dashboard=True,
         dashboard_host=settings.ray_dashboard_host,
         dashboard_port=settings.ray_dashboard_port,
+        object_store_memory=settings.ray_object_store_memory_bytes,
     )
     return True
 
@@ -102,6 +103,7 @@ def trainable(
             "model_type": model_config["model_type"],
         },
         run_name_prefix=f"mediwatch-tune-trial-{model_config['model_type']}",
+        log_model_artifacts=False,
     )
     return {
         "average_precision": result.average_precision,

@@ -196,7 +196,11 @@ def train_and_log(
     parent_run_id: str | None = None,
     extra_tags: dict[str, Any] | None = None,
     run_name_prefix: str = "mediwatch-train",
+    log_model_artifacts: bool = True,
 ) -> TrainingResult:
+    if register_as_best and not log_model_artifacts:
+        raise ValueError("register_as_best=True requires log_model_artifacts=True.")
+
     mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
     mlflow.set_experiment(settings.mlflow_experiment_name)
 
@@ -227,43 +231,45 @@ def train_and_log(
         metrics = evaluate_pipeline(model, bundle.test_x, bundle.test_y)
         mlflow.log_metrics(metrics)
 
-        sample_input = bundle.test_x.head(5)
-        sample_output = model.predict_proba(sample_input)[:, 1]
-        signature = infer_signature(sample_input, sample_output)
-        mlflow.sklearn.log_model(
-            sk_model=model,
-            name="model",
-            signature=signature,
-            input_example=sample_input,
-        )
-
-        model_path = save_model(model, model_version=model_version)
-        mlflow.log_artifact(str(model_path), artifact_path="exported")
-
-        manifest = {
-            "project": settings.project_name,
-            "model_version": model_version,
-            "model_path": str(model_path),
-            "promotion_metric": settings.promotion_metric,
-            "metrics": metrics,
-            "params": params,
-            "mlflow_run_id": run.info.run_id,
-            "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        }
-
+        model_path: Path | None = None
         s3_model_uri = ""
         s3_manifest_uri = ""
-        if register_as_best:
-            model_key = f"{settings.s3_prefix}/models/{model_path.name}"
-            manifest_key = f"{settings.s3_prefix}/models/latest_model.json"
-            s3_model_uri = upload_file_to_s3(model_path, model_key)
-            manifest["s3_model_uri"] = s3_model_uri
-            s3_manifest_uri = upload_json_to_s3(manifest, manifest_key)
-            write_manifest(manifest)
+        if log_model_artifacts:
+            sample_input = bundle.test_x.head(5)
+            sample_output = model.predict_proba(sample_input)[:, 1]
+            signature = infer_signature(sample_input, sample_output)
+            mlflow.sklearn.log_model(
+                sk_model=model,
+                name="model",
+                signature=signature,
+                input_example=sample_input,
+            )
+
+            model_path = save_model(model, model_version=model_version)
+            mlflow.log_artifact(str(model_path), artifact_path="exported")
+
+            manifest = {
+                "project": settings.project_name,
+                "model_version": model_version,
+                "model_path": str(model_path),
+                "promotion_metric": settings.promotion_metric,
+                "metrics": metrics,
+                "params": params,
+                "mlflow_run_id": run.info.run_id,
+                "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            }
+
+            if register_as_best:
+                model_key = f"{settings.s3_prefix}/models/{model_path.name}"
+                manifest_key = f"{settings.s3_prefix}/models/latest_model.json"
+                s3_model_uri = upload_file_to_s3(model_path, model_key)
+                manifest["s3_model_uri"] = s3_model_uri
+                s3_manifest_uri = upload_json_to_s3(manifest, manifest_key)
+                write_manifest(manifest)
 
         result = TrainingResult(
             model_version=model_version,
-            model_path=str(model_path),
+            model_path=str(model_path) if model_path else "",
             f1=metrics["f1"],
             precision=metrics["precision"],
             recall=metrics["recall"],
