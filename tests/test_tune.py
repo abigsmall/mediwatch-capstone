@@ -3,6 +3,35 @@ from types import SimpleNamespace
 from mediwatch.training import tune
 
 
+def test_init_ray_for_tuning_uses_dashboard_settings(monkeypatch):
+    captured = {}
+
+    monkeypatch.setattr(tune.ray, "is_initialized", lambda: False)
+
+    def fake_ray_init(**kwargs):
+        captured.update(kwargs)
+
+    monkeypatch.setattr(tune.ray, "init", fake_ray_init)
+
+    assert tune._init_ray_for_tuning() is True
+    assert captured == {
+        "include_dashboard": True,
+        "dashboard_host": tune.settings.ray_dashboard_host,
+        "dashboard_port": tune.settings.ray_dashboard_port,
+    }
+
+
+def test_init_ray_for_tuning_reuses_existing_ray(monkeypatch):
+    monkeypatch.setattr(tune.ray, "is_initialized", lambda: True)
+
+    def fail_if_called(**kwargs):
+        raise AssertionError("ray.init should not be called")
+
+    monkeypatch.setattr(tune.ray, "init", fail_if_called)
+
+    assert tune._init_ray_for_tuning() is False
+
+
 def test_trainable_logs_trial_as_child_run(monkeypatch):
     captured = {}
 

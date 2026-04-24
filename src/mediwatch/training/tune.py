@@ -7,6 +7,7 @@ from typing import Any
 
 import mlflow
 import pandas as pd
+import ray
 from ray import tune
 
 from mediwatch.dataset import DatasetBundle, load_raw_dataset, make_dataset_bundle
@@ -56,6 +57,18 @@ EXTRA_TREES_SEARCH = [
 ]
 
 SEARCH_SPACE = LOGISTIC_REGRESSION_SEARCH + RANDOM_FOREST_SEARCH + EXTRA_TREES_SEARCH
+
+
+def _init_ray_for_tuning() -> bool:
+    if ray.is_initialized():
+        return False
+
+    ray.init(
+        include_dashboard=True,
+        dashboard_host=settings.ray_dashboard_host,
+        dashboard_port=settings.ray_dashboard_port,
+    )
+    return True
 
 
 # the `*` means everything after has to be passed by keyword, not position,
@@ -129,43 +142,48 @@ def run_tuning(
             }
         )
 
-        tuner = tune.Tuner(
-            tune.with_resources(
-                tune.with_parameters(
-                    trainable,
-                    bundle=dataset_bundle,
-                    parent_run_id=parent_run.info.run_id,
+        ray_started_here = _init_ray_for_tuning()
+        try:
+            tuner = tune.Tuner(
+                tune.with_resources(
+                    tune.with_parameters(
+                        trainable,
+                        bundle=dataset_bundle,
+                        parent_run_id=parent_run.info.run_id,
+                    ),
+                    {"cpu": 1},
                 ),
-                {"cpu": 1},
-            ),
-            tune_config=tune.TuneConfig(
-                metric=promotion_metric,
-                mode="max",
-                num_samples=samples,
-                max_concurrent_trials=settings.tune_max_concurrent_trials,
-            ),
-            param_space={
-                "model_config": tune.grid_search(SEARCH_SPACE),
-            },
-        )
-        results = tuner.fit()
-        best = results.get_best_result(metric=promotion_metric, mode="max")
-        best_config = best.config["model_config"]
-        numeric_best_metrics = {
-            key: value
-            for key, value in best.metrics.items()
-            if isinstance(value, int | float)
-        }
-        mlflow.log_metrics(numeric_best_metrics)
-        mlflow.log_dict(best_config, "best_config.json")
+                tune_config=tune.TuneConfig(
+                    metric=promotion_metric,
+                    mode="max",
+                    num_samples=samples,
+                    max_concurrent_trials=settings.tune_max_concurrent_trials,
+                ),
+                param_space={
+                    "model_config": tune.grid_search(SEARCH_SPACE),
+                },
+            )
+            results = tuner.fit()
+            best = results.get_best_result(metric=promotion_metric, mode="max")
+            best_config = best.config["model_config"]
+            numeric_best_metrics = {
+                key: value
+                for key, value in best.metrics.items()
+                if isinstance(value, int | float)
+            }
+            mlflow.log_metrics(numeric_best_metrics)
+            mlflow.log_dict(best_config, "best_config.json")
 
-        return {
-            "backend": "ray-tune",
-            "best_config": best_config,
-            "best_metrics": best.metrics,
-            "promotion_metric": promotion_metric,
-            "parent_run_id": parent_run.info.run_id,
-        }
+            return {
+                "backend": "ray-tune",
+                "best_config": best_config,
+                "best_metrics": best.metrics,
+                "promotion_metric": promotion_metric,
+                "parent_run_id": parent_run.info.run_id,
+            }
+        finally:
+            if ray_started_here:
+                ray.shutdown()
 
 
 def main() -> None:
