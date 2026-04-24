@@ -110,6 +110,13 @@ def _loggable_params(model_config: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _loggable_tags(tags: dict[str, Any]) -> dict[str, str]:
+    return {
+        key: "none" if value is None else str(value)
+        for key, value in tags.items()
+    }
+
+
 def build_pipeline(
     train_x: pd.DataFrame,
     model_config: dict[str, Any] | None = None,
@@ -186,6 +193,9 @@ def train_and_log(
     class_weight: str | None = "balanced",
     model_config: dict[str, Any] | None = None,
     register_as_best: bool = True,
+    parent_run_id: str | None = None,
+    extra_tags: dict[str, Any] | None = None,
+    run_name_prefix: str = "mediwatch-train",
 ) -> TrainingResult:
     mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
     mlflow.set_experiment(settings.mlflow_experiment_name)
@@ -198,7 +208,18 @@ def train_and_log(
     params = _loggable_params(normalized_model_config)
     model_version = _model_version()
 
-    with mlflow.start_run(run_name=f"mediwatch-train-{model_version}") as run:
+    with mlflow.start_run(
+        run_name=f"{run_name_prefix}-{model_version}",
+        nested=mlflow.active_run() is not None,
+    ) as run:
+        tags = {
+            "run_type": "training",
+            "model_type": normalized_model_config["model_type"],
+            **(extra_tags or {}),
+        }
+        if parent_run_id:
+            tags["mlflow.parentRunId"] = parent_run_id
+        mlflow.set_tags(_loggable_tags(tags))
         mlflow.log_params(params)
 
         model = build_pipeline(bundle.train_x, model_config=normalized_model_config)

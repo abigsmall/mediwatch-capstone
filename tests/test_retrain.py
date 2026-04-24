@@ -48,10 +48,11 @@ def test_retrain_compares_candidate_and_incumbent_on_same_combined_test_split(
         "class_weight": None,
     }
 
-    def fake_train_and_log(bundle, model_config, register_as_best):
+    def fake_train_and_log(bundle, model_config, register_as_best, extra_tags):
         candidate_bundle["test_x"] = bundle.test_x
         candidate_bundle["test_y"] = bundle.test_y
         candidate_bundle["model_config"] = model_config
+        candidate_bundle["extra_tags"] = extra_tags
         return TrainingResult(
             model_version="candidate-v1",
             model_path=str(tmp_path / "candidate.joblib"),
@@ -82,7 +83,11 @@ def test_retrain_compares_candidate_and_incumbent_on_same_combined_test_split(
 
     monkeypatch.setattr(
         "mediwatch.pipelines.retrain.run_tuning",
-        lambda bundle: {"backend": "fallback-grid-search", "best_config": tuned_config},
+        lambda bundle: {
+            "backend": "fallback-grid-search",
+            "best_config": tuned_config,
+            "parent_run_id": "parent-123",
+        },
     )
     monkeypatch.setattr("mediwatch.pipelines.retrain.train_and_log", fake_train_and_log)
     monkeypatch.setattr("mediwatch.pipelines.retrain.read_manifest", lambda: {"metrics": {"f1": 0.10}})
@@ -106,5 +111,9 @@ def test_retrain_compares_candidate_and_incumbent_on_same_combined_test_split(
     assert result["promoted"] is False
     assert wrote_manifest["called"] is False
     assert candidate_bundle["model_config"] == tuned_config
+    assert candidate_bundle["extra_tags"] == {
+        "run_type": "retraining_candidate",
+        "tuning_parent_run_id": "parent-123",
+    }
     assert candidate_bundle["test_x"].equals(incumbent_bundle["test_x"])
     assert candidate_bundle["test_y"].equals(incumbent_bundle["test_y"])

@@ -27,6 +27,10 @@ def retrain(reference_data_path: Path, current_data_path: Path) -> dict:
         bundle,
         model_config=best_config,
         register_as_best=False,
+        extra_tags={
+            "run_type": "retraining_candidate",
+            "tuning_parent_run_id": tuning_result.get("parent_run_id"),
+        },
     )
     incumbent_manifest = read_manifest()
     incumbent_model = load_model()
