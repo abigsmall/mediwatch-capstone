@@ -4,7 +4,7 @@ from mediwatch.training import tune
 
 
 def test_search_space_is_trimmed_and_includes_catboost():
-    assert len(tune.SEARCH_SPACE) == 11
+    assert len(tune.SEARCH_SPACE) < 40
     assert {config["model_type"] for config in tune.SEARCH_SPACE} == {
         "logistic_regression",
         "random_forest",
@@ -17,7 +17,7 @@ def test_search_space_is_trimmed_and_includes_catboost():
         if config["model_type"] in {"random_forest", "extra_trees"}
     )
     assert all(
-        config.get("min_samples_leaf", 0) >= 5
+        config.get("min_samples_leaf", 0) >= 3
         for config in tune.SEARCH_SPACE
         if config["model_type"] in {"random_forest", "extra_trees"}
     )

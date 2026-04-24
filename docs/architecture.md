@@ -2,13 +2,13 @@
 
 ## Core flow
 - `data/raw/diabetic_data.csv` is the source dataset.
-- `mediwatch.training.train` runs preprocessing, model training, MLflow logging, and artifact export.
+- `mediwatch.training.train` runs preprocessing, logistic-regression baseline training, MLflow logging, and artifact export. This creates the initial incumbent model for end-to-end retraining demos.
 - `mediwatch.training.tune` uses Ray Tune to run the model-family and hyperparameter search across logistic regression, random forest, extra trees, and CatBoost candidates. CatBoost uses a separate preprocessing path that preserves categorical feature names instead of one-hot encoding them. Per-trial logging still happens in `mediwatch.training.pipeline.train_and_log` (which `mediwatch.training.train` also relies on) via MLflow. The Tune `trainable` returns final metrics to Ray rather than calling `tune.report`.
 - `models/latest_model.json` acts as the deployment manifest for the active model.
 - `FastAPI` serves `/health`, `/predict`, and `/predict-batch`.
 - `Streamlit` provides the evaluator-facing UI.
 - `mediwatch.monitoring.drift` scores current data, runs Evidently drift checks, writes an HTML report, and optionally triggers Airflow.
-- `Airflow` runs the retraining DAG and promotes a candidate model when it beats the incumbent on the configured promotion metric, which defaults to `average_precision`.
+- `Airflow` runs the retraining DAG and promotes a candidate model when it beats the incumbent on the configured promotion metric, which defaults to `average_precision`. The intended demo flow starts with a logistic-regression incumbent, then lets retraining evaluate richer model families after drift.
 
 ## Infrastructure
 - Primary deployment target: `EC2 + S3 + Docker Compose`

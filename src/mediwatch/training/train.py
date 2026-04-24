@@ -14,7 +14,8 @@ def main() -> None:
 
     # `bundle` includes all the separate datasets (features, target, train, test) in one class for readability
     bundle = make_dataset_bundle(load_raw_dataset())
-    # The core functionality, `train_and_log`, lives separately in training.pipeline since it is also used for retraining
+    # This CLI intentionally trains the simple logistic-regression incumbent.
+    # The retraining DAG can later compare it against richer tuned model families.
     result = train_and_log(
         bundle,
         c_value=args.c_value,
