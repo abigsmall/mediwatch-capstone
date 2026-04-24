@@ -32,7 +32,6 @@ DEFAULT_EXCLUDES = {
     "httpx",
     "pytest",
     "python-multipart",
-    "ray",
     "streamlit",
     "uvicorn",
 }

@@ -6,6 +6,7 @@ from typing import Any
 import mlflow
 import pandas as pd
 from mlflow.models.signature import infer_signature
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
 from sklearn.impute import SimpleImputer
@@ -46,6 +47,37 @@ class TrainingResult:
     params: dict[str, Any]
 
 
+class CatBoostPreprocessor(BaseEstimator, TransformerMixin):
+    def __init__(
+        self,
+        categorical_columns: list[str],
+        numeric_columns: list[str],
+        categorical_fill_value: str = "__missing__",
+    ):
+        self.categorical_columns = categorical_columns
+        self.numeric_columns = numeric_columns
+        self.categorical_fill_value = categorical_fill_value
+
+    def fit(self, x: pd.DataFrame, y=None):
+        numeric_medians = x[self.numeric_columns].median(numeric_only=True)
+        self.numeric_fill_values_ = numeric_medians.to_dict()
+        return self
+
+    def transform(self, x: pd.DataFrame) -> pd.DataFrame:
+        transformed = x.copy()
+        for column in self.categorical_columns:
+            transformed[column] = (
+                transformed[column]
+                .fillna(self.categorical_fill_value)
+                .astype(str)
+            )
+        for column in self.numeric_columns:
+            transformed[column] = transformed[column].fillna(
+                self.numeric_fill_values_.get(column, 0)
+            )
+        return transformed
+
+
 def _normalize_model_config(
     model_config: dict[str, Any] | None = None,
     *,
@@ -68,7 +100,10 @@ def _normalize_model_config(
     return normalized
 
 
-def _build_classifier(model_config: dict[str, Any]):
+def _build_classifier(
+    model_config: dict[str, Any],
+    categorical_columns: list[str] | None = None,
+):
     model_type = model_config["model_type"]
 
     if model_type == "logistic_regression":
@@ -98,6 +133,30 @@ def _build_classifier(model_config: dict[str, Any]):
             class_weight=model_config.get("class_weight"),
             n_jobs=int(model_config.get("n_jobs", 1)),
             random_state=settings.random_state,
+        )
+
+    if model_type == "catboost":
+        try:
+            from catboost import CatBoostClassifier
+        except ImportError as exc:
+            raise ImportError(
+                "CatBoost model configs require the 'catboost' package. "
+                "Install project dependencies before running CatBoost tuning."
+            ) from exc
+
+        return CatBoostClassifier(
+            iterations=int(model_config.get("iterations", 200)),
+            depth=int(model_config.get("depth", 6)),
+            learning_rate=float(model_config.get("learning_rate", 0.05)),
+            l2_leaf_reg=float(model_config.get("l2_leaf_reg", 3.0)),
+            auto_class_weights=model_config.get("auto_class_weights"),
+            loss_function="Logloss",
+            eval_metric="PRAUC",
+            cat_features=categorical_columns or [],
+            random_seed=settings.random_state,
+            thread_count=int(model_config.get("thread_count", 1)),
+            verbose=False,
+            allow_writing_files=False,
         )
 
     raise ValueError(f"Unsupported model_type: {model_type}")
@@ -131,6 +190,26 @@ def build_pipeline(
     )
     categorical_columns = infer_categorical_columns(train_x)
     numeric_columns = infer_numeric_columns(train_x)
+
+    if model_config["model_type"] == "catboost":
+        return Pipeline(
+            steps=[
+                (
+                    "preprocessor",
+                    CatBoostPreprocessor(
+                        categorical_columns=categorical_columns,
+                        numeric_columns=numeric_columns,
+                    ),
+                ),
+                (
+                    "classifier",
+                    _build_classifier(
+                        model_config,
+                        categorical_columns=categorical_columns,
+                    ),
+                ),
+            ]
+        )
 
     preprocessor = ColumnTransformer(
         transformers=[

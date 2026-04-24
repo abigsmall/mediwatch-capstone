@@ -19,44 +19,52 @@ LOGISTIC_REGRESSION_SEARCH = [
     {
         "model_type": "logistic_regression",
         "c_value": c_value,
-        "class_weight": class_weight,
+        "class_weight": "balanced",
     }
-    for c_value, class_weight in product([0.25, 0.5, 1.0, 2.0], ["balanced", None])
+    for c_value in [0.5, 1.0, 2.0]
 ]
 
 RANDOM_FOREST_SEARCH = [
     {
         "model_type": "random_forest",
-        "n_estimators": n_estimators,
+        "n_estimators": 400,
         "max_depth": max_depth,
-        "min_samples_leaf": min_samples_leaf,
-        "class_weight": class_weight,
+        "min_samples_leaf": 3,
+        "class_weight": "balanced",
     }
-    for n_estimators, max_depth, min_samples_leaf, class_weight in product(
-        [200, 400],
-        [None, 12],
-        [1, 3],
-        ["balanced", None],
-    )
+    for max_depth in [8, 12, 20]
 ]
 
 EXTRA_TREES_SEARCH = [
     {
         "model_type": "extra_trees",
-        "n_estimators": n_estimators,
+        "n_estimators": 400,
         "max_depth": max_depth,
-        "min_samples_leaf": min_samples_leaf,
-        "class_weight": class_weight,
+        "min_samples_leaf": 3,
+        "class_weight": "balanced",
     }
-    for n_estimators, max_depth, min_samples_leaf, class_weight in product(
-        [200, 400],
-        [None, 12],
-        [1, 3],
-        ["balanced", None],
-    )
+    for max_depth in [8, 12, 20]
 ]
 
-SEARCH_SPACE = LOGISTIC_REGRESSION_SEARCH + RANDOM_FOREST_SEARCH + EXTRA_TREES_SEARCH
+CATBOOST_SEARCH = [
+    {
+        "model_type": "catboost",
+        "iterations": iterations,
+        "depth": depth,
+        "learning_rate": 0.05,
+        "l2_leaf_reg": 3.0,
+        "auto_class_weights": "Balanced",
+        "thread_count": 1,
+    }
+    for iterations, depth in product([150, 250], [4, 6])
+]
+
+SEARCH_SPACE = (
+    LOGISTIC_REGRESSION_SEARCH
+    + RANDOM_FOREST_SEARCH
+    + EXTRA_TREES_SEARCH
+    + CATBOOST_SEARCH
+)
 
 
 def _init_ray_for_tuning() -> bool:

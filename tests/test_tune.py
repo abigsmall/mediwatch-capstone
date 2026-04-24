@@ -3,6 +3,26 @@ from types import SimpleNamespace
 from mediwatch.training import tune
 
 
+def test_search_space_is_trimmed_and_includes_catboost():
+    assert len(tune.SEARCH_SPACE) == 11
+    assert {config["model_type"] for config in tune.SEARCH_SPACE} == {
+        "logistic_regression",
+        "random_forest",
+        "extra_trees",
+        "catboost",
+    }
+    assert all(
+        config.get("max_depth") is not None
+        for config in tune.SEARCH_SPACE
+        if config["model_type"] in {"random_forest", "extra_trees"}
+    )
+    assert all(
+        config.get("min_samples_leaf", 0) >= 5
+        for config in tune.SEARCH_SPACE
+        if config["model_type"] in {"random_forest", "extra_trees"}
+    )
+
+
 def test_init_ray_for_tuning_uses_dashboard_settings(monkeypatch):
     captured = {}
 

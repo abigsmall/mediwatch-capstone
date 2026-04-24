@@ -120,7 +120,7 @@ uv run python -m mediwatch.training.train
 
 If you are running this command from the host while the Docker Compose stack is up, make sure `MLFLOW_TRACKING_URI` points to `http://localhost:5001` rather than the container-only hostname `http://mlflow:5000`.
 
-Optional tuning across logistic regression, random forest, and extra trees candidates:
+Optional tuning across logistic regression, random forest, extra trees, and CatBoost candidates:
 
 ```bash
 uv run python -m mediwatch.training.tune
