@@ -111,6 +111,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.airflow
+    user: "${LOCAL_UID:-50000}:0"
     shm_size: "1g"
     env_file:
       - .env
