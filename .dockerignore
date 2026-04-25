@@ -8,8 +8,6 @@ __pycache__
 *.egg-info
 mlruns
 evidently
-models/*.joblib
-models/latest_model.json
 data/raw/diabetic_data.csv
 data/processed/*.csv
 airflow/logs

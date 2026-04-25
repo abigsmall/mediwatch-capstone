@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mediwatch-api
+  namespace: mediwatch
+  labels:
+    app: mediwatch-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mediwatch-api
+  template:
+    metadata:
+      labels:
+        app: mediwatch-api
+    spec:
+      containers:
+        - name: api
+          image: mediwatch-api:local
+          imagePullPolicy: IfNotPresent
+          command:
+            - uvicorn
+            - mediwatch.api.app:app
+          args:
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8000"
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: PYTHONPATH
+              value: /app/src
+            - name: MLFLOW_TRACKING_URI
+              value: file:///app/mlruns
+            - name: MLFLOW_EXPERIMENT_NAME
+              value: mediwatch-readmission
+            - name: MEDIWATCH_S3_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: mediwatch-secrets
+                  key: MEDIWATCH_S3_BUCKET
+                  optional: true
+            - name: MEDIWATCH_S3_PREFIX
+              value: mediwatch
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30

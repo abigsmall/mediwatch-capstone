@@ -108,6 +108,8 @@ def load_model(model_path: str | Path | None = None) -> Any:
         resolved_model_path = Path(model_path_value)
         if resolved_model_path.exists():
             model_path = resolved_model_path
+        elif (settings.models_dir / resolved_model_path.name).exists():
+            model_path = settings.models_dir / resolved_model_path.name
         elif manifest.get("s3_model_uri"):
             model_path = _download_s3_file(manifest["s3_model_uri"], "models")
         else:
