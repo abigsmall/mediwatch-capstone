@@ -10,7 +10,7 @@ MediWatch is an end-to-end MLOps capstone project for predicting patient readmis
 - Evidently monitoring with simulated drift generation
 - Airflow DAG for retraining and model promotion
 - Docker Compose stack for reproducibility
-- Kubernetes manifests for deploying the FastAPI inference API
+- Kubernetes manifests for deploying the FastAPI inference API and Streamlit UI
 - EDA notebook and project documentation
 
 ## Dataset assumption
@@ -27,7 +27,7 @@ If you want the stricter `<30` interpretation instead, adjust the target mapping
 ## Recommended setup: Docker Compose
 Docker Compose is the primary and recommended way to run this project. It is the most reproducible setup for evaluation because it brings up the API, Streamlit UI, MLflow, Airflow, and supporting services together in a consistent environment.
 
-For the Kubernetes deployment requirement, this project deploys only the FastAPI inference service to Minikube on EC2 and leaves the rest of the demo stack in Docker Compose. See [Kubernetes Deployment](docs/kubernetes.md).
+For the Kubernetes deployment requirement, this project deploys the FastAPI inference service and Streamlit UI to Minikube on EC2 and leaves MLflow, Airflow, and Postgres in Docker Compose. See [Kubernetes Deployment](docs/kubernetes.md).
 
 Before starting the stack:
 
