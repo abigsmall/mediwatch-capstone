@@ -23,20 +23,48 @@ EC2
     └── mediwatch-api
 ```
 
+## Fresh EC2 Prerequisites
+
+On a fresh EC2 instance, `minikube` may not be available through the default Ubuntu apt repositories:
+
+```bash
+sudo apt install minikube
+# E: Unable to locate package minikube
+```
+
+If that happens, install Minikube from the official Linux package URL instead:
+
+```bash
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube_latest_amd64.deb
+sudo dpkg -i minikube_latest_amd64.deb
+minikube version
+```
+
+If `minikube start --driver=docker` fails with a Docker permission error, the current user probably cannot access the Docker daemon socket yet. Add the user to the `docker` group, then refresh the shell session:
+
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+docker ps
+```
+
+If `newgrp docker` does not refresh the permissions cleanly, log out of the EC2 SSH session and log back in. You may not have to do this, but I actually had to restart the EC2 instance before the change had any effect.
+
+Avoid running Minikube itself with `sudo`; the Docker driver should work as the normal user once Docker group membership is active.
+
+Standalone `kubectl` was not installed for me, so you may need to use Minikube's bundled `kubectl`:
+
+```bash
+minikube kubectl -- get pods -A
+```
+
 ## One-Time Minikube Start
 
 From the repository root on EC2:
 
 ```bash
 minikube start --driver=docker --ports=30080:30080
-kubectl get nodes
-```
-
-The `--ports` flag publishes the Kubernetes NodePort from the Minikube Docker container onto the EC2 host. If Minikube is already running without this port mapping, recreate it before the demo:
-
-```bash
-minikube delete
-minikube start --driver=docker --ports=30080:30080
+minikube kubectl -- get nodes
 ```
 
 ## Build and Load the API Image
@@ -50,13 +78,15 @@ minikube image load mediwatch-api:local
 
 ## Optional S3 Secret
 
+<!-- TODO: Decide whether to keep this section as-is or modify it -->
+
 If the API should download promoted models from S3, create the secret after copying the example file:
 
 ```bash
 cp k8s/secret.example.yaml k8s/secret.yaml
 # edit k8s/secret.yaml with the real bucket name
-kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/secret.yaml
+minikube kubectl -- apply -f k8s/namespace.yaml
+minikube kubectl -- apply -f k8s/secret.yaml
 ```
 
 Do not commit `k8s/secret.yaml`.
@@ -64,17 +94,17 @@ Do not commit `k8s/secret.yaml`.
 ## Deploy the API
 
 ```bash
-kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/api-deployment.yaml
-kubectl apply -f k8s/api-service.yaml
+minikube kubectl -- apply -f k8s/namespace.yaml
+minikube kubectl -- apply -f k8s/api-deployment.yaml
+minikube kubectl -- apply -f k8s/api-service.yaml
 ```
 
 Check rollout status:
 
 ```bash
-kubectl -n mediwatch rollout status deployment/mediwatch-api
-kubectl -n mediwatch get pods
-kubectl -n mediwatch get svc mediwatch-api
+minikube kubectl -- -n mediwatch rollout status deployment/mediwatch-api
+minikube kubectl -- -n mediwatch get pods
+minikube kubectl -- -n mediwatch get svc mediwatch-api
 ```
 
 ## Test From EC2
@@ -105,8 +135,8 @@ After retraining promotes a new model:
 ```bash
 docker build -f Dockerfile.app -t mediwatch-api:local .
 minikube image load mediwatch-api:local
-kubectl -n mediwatch rollout restart deployment/mediwatch-api
-kubectl -n mediwatch rollout status deployment/mediwatch-api
+minikube kubectl -- -n mediwatch rollout restart deployment/mediwatch-api
+minikube kubectl -- -n mediwatch rollout status deployment/mediwatch-api
 ```
 
 This manual sequence is the baseline that the CI/CD section will automate.

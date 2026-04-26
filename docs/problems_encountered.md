@@ -2,7 +2,7 @@
 
 This document summarizes the major issues I ran into while building and validating the MediWatch capstone project, along with the root causes and the fixes or workarounds used.
 
-The biggest headache so far has been with environment/dependency management. For all my praise about [`uv`](https://docs.astral.sh/uv/), and I was doing everything with `uv` locally, I ran into so many issues trying to get it to work on the Docker side.
+The biggest headache so far has been with environment/dependency management and the libraries in Airflow not being able to see files/write to certain directories. For all my praise about [`uv`](https://docs.astral.sh/uv/), and I was doing everything with `uv` locally, I ran into so many issues trying to get it to work on the Docker side. Then the interaction between how I set up the Docker images (`Dockerfile.app` and `Dockerfile.airflow`), which at first sounded like a good idea since I was going to package the former into its own Kubernetes deployment, caused constant friction when MLflow or Ray Tune could not see something because it was prefaced with `/app` or the permissions for that file were not the same as the Airflow user, etc.
 
 ## General Lessons
 The biggest recurring theme was environment consistency:
@@ -232,3 +232,47 @@ strongly suggested that the problem was with the host filesystem mount, not with
 Resolution / workaround:
 - Planned to push the current work to GitHub and re-clone it into a normal local directory outside Dropbox/CloudStorage.
 - This should provide a more stable filesystem for Docker and Airflow.
+
+## Kubernetes and EC2 Deployment Issues
+### Minikube was not available through `apt`
+
+On a fresh EC2 instance, the first attempt to start Minikube failed because the `minikube` command was not installed.
+
+What happened:
+- Running `minikube start --driver=docker --ports=30080:30080` returned `Command 'minikube' not found`.
+- Trying `sudo apt install minikube` then failed with:
+
+```text
+E: Unable to locate package minikube
+```
+
+Resolution:
+- Installed Minikube from the official Linux Debian package URL instead of relying on Ubuntu's default apt repositories:
+
+```bash
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube_latest_amd64.deb
+sudo dpkg -i minikube_latest_amd64.deb
+minikube version
+```
+
+### Minikube Docker driver failed due to Docker permissions
+
+After Minikube was installed, the Docker driver still could not start cleanly at first.
+
+What happened:
+- `minikube start --driver=docker --ports=30080:30080` needs access to the local Docker daemon.
+- The EC2 user did not yet have permission to use Docker without `sudo`.
+- This commonly appears as a permission-denied error while connecting to the Docker socket.
+
+Resolution:
+- Added the current user to the `docker` group and refreshed the shell session:
+
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+docker ps
+```
+
+- If the permission change does not take effect immediately, log out of SSH and log back in.
+    - This may not be necessary, but I actually had to restart the EC2 instance entirely before `groups` finally showed `docker` in its result list.
+- After that, Minikube should be started as the normal user, not with `sudo`.
